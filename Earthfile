@@ -2,12 +2,15 @@ VERSION 0.6
 FROM alpine
 
 ARG KUBEADM_VERSION
-ARG C3OS_BASE_IMAGE=quay.io/c3os/core-opensuse:latest
-ARG IMAGE=quay.io/c3os/provider-kubeadm:dev
+ARG BASE_IMAGE=quay.io/c3os/core-opensuse:latest
+ARG IMAGE_REPOSITORY=quay.io/c3os
 
 ARG LUET_VERSION=0.32.4
 ARG GOLANG_VERSION=1.18
 ARG RELEASE_VERSION=0.4.0
+
+ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
+ARG BASE_IMAGE_TAG=$(echo $BASE_IMAGE | grep -o :.* | cut -c2-)
 
 go-deps:
     FROM golang:$GOLANG_VERSION
@@ -40,7 +43,7 @@ lint:
     RUN golangci-lint run
 
 docker:
-    FROM ${C3OS_BASE_IMAGE}
+    FROM $BASE_IMAGE
 
     WORKDIR /usr/bin
     RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${KUBEADM_VERSION}/crictl-v${KUBEADM_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
@@ -80,7 +83,11 @@ docker:
     RUN echo net.ipv4.ip_forward=1 >> /etc/sysctl.d/k8s.conf
 
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
-    COPY cni/calico.yaml /opt/kubeadm/calico.yaml
 
-    SAVE IMAGE --push $IMAGE
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}_${K3S_VERSION_TAG}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}_${K3S_VERSION_TAG}_${VERSION}
 
+docker-all-platforms:
+     BUILD --platform=linux/amd64 +docker
+     BUILD --platform=linux/arm64 +docker
