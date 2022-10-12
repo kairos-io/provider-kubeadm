@@ -1,4 +1,4 @@
-module github.com/c3os-io/c3os/provider-kubeadm
+module github.com/kairos-io/kairos/provider-kubeadm
 
 go 1.18
 
@@ -6,7 +6,6 @@ require (
 	github.com/c3os-io/c3os/sdk v0.0.0-20220809204311-e169fab54d21
 	github.com/mudler/yip v0.0.0-20220725150231-976737b2353c
 	github.com/sirupsen/logrus v1.9.0
-	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/cli-runtime v0.24.0
@@ -40,6 +39,7 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/client-go v0.24.2 // indirect
 	k8s.io/component-base v0.24.2 // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
