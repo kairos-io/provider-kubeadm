@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+
+	kyaml "sigs.k8s.io/yaml"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
 
 	bootstrapapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
-	kubeadmapiv1 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
-
-	"gopkg.in/yaml.v2"
+	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 
 	"github.com/c3os-io/c3os/sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -27,10 +28,16 @@ var (
 )
 
 func init() {
-	_ = kubeadmapiv1.AddToScheme(scheme)
+	_ = kubeadmapiv3.AddToScheme(scheme)
 }
 
 var configurationPath = "/opt/kubeadm"
+
+type KubeadmConfig struct {
+	ClusterConfiguration kubeadmapiv3.ClusterConfiguration `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
+	InitConfiguration    kubeadmapiv3.InitConfiguration    `json:"initConfiguration,omitempty" yaml:"initConfiguration,omitempty"`
+	JoinConfiguration    kubeadmapiv3.JoinConfiguration    `json:"joinConfiguration,omitempty" yaml:"joinConfiguration,omitempty"`
+}
 
 func main() {
 	plugin := clusterplugin.ClusterPlugin{
@@ -43,8 +50,8 @@ func main() {
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
-
 	var stages []yip.Stage
+	var kubeadmConfig KubeadmConfig
 
 	preStage := yip.Stage{
 		Systemctl: yip.Systemctl{
@@ -63,12 +70,17 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		return yip.YipConfig{}
 	}
 
+	if cluster.Options != "" {
+		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
+		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+
 	stages = append(stages, preStage)
 
 	if cluster.Role == clusterplugin.RoleInit {
-		stages = append(stages, getInitYipStages(cluster)...)
+		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		stages = append(stages, getJoinYipStages(cluster)...)
+		stages = append(stages, getJoinYipStages(cluster, kubeadmConfig.JoinConfiguration)...)
 	}
 
 	cfg := yip.YipConfig{
@@ -81,8 +93,8 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	return cfg
 }
 
-func getInitYipStages(cluster clusterplugin.Cluster) []yip.Stage {
-	kubeadmCfg := getInitNodeConfiguration(cluster)
+func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) []yip.Stage {
+	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg)
 	return []yip.Stage{
 		{
 			Name: "Init Kubeadm",
@@ -95,16 +107,16 @@ func getInitYipStages(cluster clusterplugin.Cluster) []yip.Stage {
 				},
 			},
 			Commands: []string{
-				fmt.Sprintf("kubeadm init --config %s --upload-certs", filepath.Join(configurationPath, "kubeadm.yaml")),
+				fmt.Sprintf("kubeadm init --config %s --upload-certs --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests && touch /opt/kubeadm.init", filepath.Join(configurationPath, "kubeadm.yaml")),
 			},
 		},
 	}
 }
 
-func getJoinYipStages(cluster clusterplugin.Cluster) []yip.Stage {
-	kubeadmCfg := getJoinNodeConfiguration(cluster)
+func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {
+	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
 
-	joinCmd := fmt.Sprintf("kubeadm join --config %s --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests", filepath.Join(configurationPath, "kubeadm.yaml"))
+	joinCmd := fmt.Sprintf("kubeadm join --config %s --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests && touch /opt/kubeadm.join", filepath.Join(configurationPath, "kubeadm.yaml"))
 	if cluster.Role == clusterplugin.RoleControlPlane {
 		joinCmd = joinCmd + " --control-plane"
 	}
@@ -130,14 +142,8 @@ func getJoinYipStages(cluster clusterplugin.Cluster) []yip.Stage {
 	}
 }
 
-func getInitNodeConfiguration(cluster clusterplugin.Cluster) string {
+func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 	certificateKey := getCertificateKey(cluster.ClusterToken)
-
-	var initCfg kubeadmapiv1.InitConfiguration
-	var clusterCfg kubeadmapiv1.ClusterConfiguration
-
-	_ = yaml.Unmarshal([]byte(cluster.Options), &initCfg)
-	_ = yaml.Unmarshal([]byte(cluster.Options), &clusterCfg)
 
 	substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(cluster.ClusterToken)
 
@@ -151,6 +157,8 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster) string {
 	}
 	initCfg.CertificateKey = certificateKey
 
+	clusterCfg.ControlPlaneEndpoint = cluster.ControlPlaneHost
+
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
@@ -161,12 +169,9 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster) string {
 	return out.String()
 }
 
-func getJoinNodeConfiguration(cluster clusterplugin.Cluster) string {
-	var joinCfg kubeadmapiv1.JoinConfiguration
-	_ = yaml.Unmarshal([]byte(cluster.Options), &joinCfg)
-
+func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) string {
 	if joinCfg.Discovery.BootstrapToken == nil {
-		joinCfg.Discovery.BootstrapToken = &kubeadmapiv1.BootstrapTokenDiscovery{
+		joinCfg.Discovery.BootstrapToken = &kubeadmapiv3.BootstrapTokenDiscovery{
 			Token:                    cluster.ClusterToken,
 			APIServerEndpoint:        cluster.ControlPlaneHost,
 			UnsafeSkipCAVerification: true,
@@ -174,7 +179,7 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster) string {
 	}
 
 	if cluster.Role == clusterplugin.RoleControlPlane {
-		joinCfg.ControlPlane = &kubeadmapiv1.JoinControlPlane{
+		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
 			CertificateKey: getCertificateKey(cluster.ClusterToken),
 		}
 	}

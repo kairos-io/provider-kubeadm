@@ -1,16 +1,21 @@
 VERSION 0.6
 FROM alpine
 
-ARG KUBEADM_VERSION
-ARG BASE_IMAGE=quay.io/c3os/core-opensuse:latest
-ARG IMAGE_REPOSITORY=quay.io/c3os
+ARG KUBEADM_VERSION=latest
+ARG BASE_IMAGE=quay.io/kairos/core-opensuse:latest
+ARG IMAGE_REPOSITORY=quay.io/kairos
 
-ARG LUET_VERSION=0.32.4
-ARG GOLANG_VERSION=1.18
+ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
 
+ARG LUET_VERSION=0.32.4
+ARG GOLINT_VERSION=v1.46.2
+ARG GOLANG_VERSION=1.18
+
+ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
 ARG BASE_IMAGE_TAG=$(echo $BASE_IMAGE | grep -o :.* | cut -c2-)
+ARG KUBEADM_VERSION_TAG=$(echo $KUBEADM_VERSION | sed s/+/-/)
 
 go-deps:
     FROM golang:$GOLANG_VERSION
@@ -27,9 +32,22 @@ BUILD_GOLANG:
     COPY . ./
     ARG BIN
     ARG SRC
+
     ENV CGO_ENABLED=0
+
     RUN go build -ldflags "-s -w" -o ${BIN} ./${SRC} && upx ${BIN}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
+
+VERSION:
+    COMMAND
+    FROM alpine
+    RUN apk add git
+
+    COPY . ./
+
+    RUN echo $(git describe --exact-match --tags || echo "v0.0.0-$(git log --oneline -n 1 | cut -d" " -f1)") > VERSION
+
+    SAVE ARTIFACT VERSION VERSION
 
 build-provider:
     FROM +go-deps
@@ -43,10 +61,13 @@ lint:
     RUN golangci-lint run
 
 docker:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
+
     FROM $BASE_IMAGE
 
     WORKDIR /usr/bin
-    RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${KUBEADM_VERSION}/crictl-v${KUBEADM_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
+    RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
     RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
     RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
     RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl
@@ -84,9 +105,8 @@ docker:
 
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
 
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}_${K3S_VERSION_TAG}
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${BASE_IMAGE_TAG}_${K3S_VERSION_TAG}_${VERSION}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}_${VERSION}
 
 docker-all-platforms:
      BUILD --platform=linux/amd64 +docker
