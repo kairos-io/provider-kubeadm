@@ -158,8 +158,6 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	}
 	initCfg.CertificateKey = certificateKey
 
-	clusterCfg.ControlPlaneEndpoint = cluster.ControlPlaneHost
-
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
