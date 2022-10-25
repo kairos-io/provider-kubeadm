@@ -1,0 +1,39 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        base-image:
+          - quay.io/kairos/core-opensuse:v1.1.1
+          - quay.io/kairos/core-ubuntu-20-lts:v1.1.1
+          - quay.io/kairos/core-ubuntu-22-lts:v1.1.1
+        kubeadm-version:
+          - v1.22.15
+          - v1.23.12
+          - v1.24.6
+          - v1.25.2
+    env:
+      REGISTRY: quay.io
+      REGISTRY_USER: ${{ secrets.QUAY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker-practice/actions-setup-docker@master
+      - uses: earthly/actions-setup@v1
+        with:
+          version: "latest"
+      - run: echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
+      - run: env | grep ACTIONS_ID_TOKEN_REQUEST > .env
+      - run: env | grep REGISTRY >> .env
+      - run: earthly --ci --push +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
+      - run: earthly --ci +cosign-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
+
