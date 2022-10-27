@@ -108,6 +108,38 @@ docker:
     SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}
     SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}_${VERSION}
 
+cosign:
+    ARG --required ACTIONS_ID_TOKEN_REQUEST_TOKEN
+    ARG --required ACTIONS_ID_TOKEN_REQUEST_URL
+
+    ARG --required REGISTRY
+    ARG --required REGISTRY_USER
+    ARG --required REGISTRY_PASSWORD
+
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
+
+    FROM docker
+
+    ENV ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN}
+    ENV ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL}
+
+    ENV REGISTRY=${REGISTRY}
+    ENV REGISTRY_USER=${REGISTRY_USER}
+    ENV REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
+
+    ENV COSIGN_EXPERIMENTAL=1
+    COPY +build-cosign/cosign /usr/local/bin/
+
+    RUN echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
+
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}_${VERSION}
+
 docker-all-platforms:
      BUILD --platform=linux/amd64 +docker
      BUILD --platform=linux/arm64 +docker
+
+cosign-all-platforms:
+     BUILD --platform=linux/amd64 +cosign
+     BUILD --platform=linux/arm64 +cosign
