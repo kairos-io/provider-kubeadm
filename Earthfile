@@ -68,9 +68,9 @@ docker:
 
     WORKDIR /usr/bin
     RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl
+    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
+    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubelet
+    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubectl
     RUN chmod +x kubeadm
     RUN chmod +x kubelet
     RUN chmod +x kubectl
