@@ -17,6 +17,10 @@ ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
 ARG BASE_IMAGE_TAG=$(echo $BASE_IMAGE | grep -o :.* | cut -c2-)
 ARG KUBEADM_VERSION_TAG=$(echo $KUBEADM_VERSION | sed s/+/-/)
 
+build-cosign:
+    FROM gcr.io/projectsigstore/cosign:v1.9.0
+    SAVE ARTIFACT /ko-app/cosign cosign
+
 go-deps:
     FROM golang:$GOLANG_VERSION
     WORKDIR /build
