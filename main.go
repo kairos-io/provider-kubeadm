@@ -29,12 +29,12 @@ import (
 var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/live"}
 
 const (
-	containerdEnvConfigPath = "/etc/default"
-	envPrefix               = "Environment="
-	systemdDir              = "/etc/systemd/system/"
-	kubeletServiceName      = "kubelet"
-	containerdServiceName   = "containerd.service"
-	containerd              = "containerd"
+	kubeletEnvConfigPath = "/etc/default"
+	envPrefix            = "Environment="
+	systemdDir           = "/etc/systemd/system/containerd.service.d"
+	kubeletServiceName   = "kubelet"
+	containerdEnv        = "http-proxy.conf"
+	containerd           = "containerd"
 )
 
 var (
@@ -128,12 +128,12 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 					Content:     kubeadmCfg,
 				},
 				{
-					Path:        filepath.Join(containerdEnvConfigPath, "kubelet"),
+					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
 					Permissions: 0400,
 					Content:     kubeletProxyEnv(),
 				},
 				{
-					Path:        filepath.Join(systemdDir, containerdServiceName),
+					Path:        filepath.Join(systemdDir, containerdEnv),
 					Permissions: 0400,
 					Content:     containerdProxyEnv(),
 				},
@@ -178,12 +178,12 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 					Content:     kubeadmCfg,
 				},
 				{
-					Path:        filepath.Join(containerdEnvConfigPath, kubeletServiceName),
+					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
 					Permissions: 0400,
 					Content:     kubeletProxyEnv(),
 				},
 				{
-					Path:        filepath.Join(systemdDir, containerdServiceName),
+					Path:        filepath.Join(systemdDir, containerdEnv),
 					Permissions: 0400,
 					Content:     containerdProxyEnv(),
 				},
