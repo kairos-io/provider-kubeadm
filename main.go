@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	kyaml "sigs.k8s.io/yaml"
 
@@ -17,10 +19,22 @@ import (
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 
-	"github.com/c3os-io/c3os/sdk/clusterplugin"
+	"github.com/kairos-io/kairos/pkg/config"
+	"github.com/kairos-io/kairos/sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
 	"github.com/sirupsen/logrus"
 	bootstraptokenv1 "k8s.io/kubernetes/cmd/kubeadm/app/apis/bootstraptoken/v1"
+)
+
+var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/live"}
+
+const (
+	containerdEnvConfigPath = "/etc/default"
+	envPrefix               = "ENVIRONMENT="
+	systemdDir              = "/etc/systemd/system/"
+	kubeletServiceName      = "kubelet"
+	containerdServiceName   = "containerd.service"
+	containerd              = "containerd"
 )
 
 var (
@@ -70,6 +84,17 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
+	_config, _ := config.Scan(config.Directories(configScanDir...))
+
+	if _config != nil {
+		for _, e := range _config.Env {
+			pair := strings.SplitN(e, "=", 2)
+			if len(pair) >= 2 {
+				os.Setenv(pair[0], pair[1])
+			}
+		}
+	}
+
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
 
 	stages = append(stages, preStage)
@@ -102,6 +127,16 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 					Permissions: 0640,
 					Content:     kubeadmCfg,
 				},
+				{
+					Path:        filepath.Join(containerdEnvConfigPath, "kubelet"),
+					Permissions: 0400,
+					Content:     proxyEnv(""),
+				},
+				{
+					Path:        filepath.Join(systemdDir, containerdServiceName),
+					Permissions: 0400,
+					Content:     proxyEnv(containerd),
+				},
 			},
 		},
 		{
@@ -130,6 +165,27 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 					Path:        filepath.Join(configurationPath, "kubeadm.yaml"),
 					Permissions: 0640,
 					Content:     kubeadmCfg,
+				},
+				{
+					Path:        filepath.Join(containerdEnvConfigPath, kubeletServiceName),
+					Permissions: 0400,
+					Content:     proxyEnv(""),
+				},
+				{
+					Path:        filepath.Join(systemdDir, containerdServiceName),
+					Permissions: 0400,
+					Content:     proxyEnv(containerd),
+				},
+			},
+		},
+		{
+			Name: "Enable Systemd Services",
+			Systemctl: yip.Systemctl{
+				Enable: []string{
+					containerd,
+				},
+				Start: []string{
+					containerd,
 				},
 			},
 		},
@@ -203,4 +259,33 @@ func transformToken(clusterToken string) string {
 	hash.Write([]byte(clusterToken))
 	hashString := hex.EncodeToString(hash.Sum(nil))
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
+}
+
+func proxyEnv(service string) string {
+	var proxy []string
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	noProxy := os.Getenv("NO_PROXY")
+
+	prefix := ""
+	if service == containerdServiceName {
+		prefix = envPrefix
+	}
+
+	if len(httpProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(prefix+"HTTP_PROXY=%s", httpProxy))
+		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_HTTP_PROXY=%s", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(prefix+"HTTPS_PROXY=%s", httpsProxy))
+		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_HTTPS_PROXY=%s", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(prefix+"NO_PROXY=%s", noProxy))
+		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_NO_PROXY=%s", httpProxy))
+	}
+
+	return strings.Join(proxy, "\n")
 }
