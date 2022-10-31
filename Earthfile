@@ -82,6 +82,7 @@ docker:
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sudo tee /etc/systemd/system/kubelet.service
     RUN mkdir -p /etc/systemd/system/kubelet.service.d
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    RUN mkdir -p /etc/systemd/system/containerd.service.d
 
     COPY luet/repositories.yaml /etc/luet/luet.yaml
 

@@ -30,7 +30,7 @@ var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/
 
 const (
 	containerdEnvConfigPath = "/etc/default"
-	envPrefix               = "ENVIRONMENT="
+	envPrefix               = "Environment="
 	systemdDir              = "/etc/systemd/system/"
 	kubeletServiceName      = "kubelet"
 	containerdServiceName   = "containerd.service"
@@ -130,12 +130,23 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 				{
 					Path:        filepath.Join(containerdEnvConfigPath, "kubelet"),
 					Permissions: 0400,
-					Content:     proxyEnv(""),
+					Content:     kubeletProxyEnv(),
 				},
 				{
 					Path:        filepath.Join(systemdDir, containerdServiceName),
 					Permissions: 0400,
-					Content:     proxyEnv(containerd),
+					Content:     containerdProxyEnv(),
+				},
+			},
+		},
+		{
+			Name: "Enable Systemd Services",
+			Systemctl: yip.Systemctl{
+				Enable: []string{
+					containerd,
+				},
+				Start: []string{
+					containerd,
 				},
 			},
 		},
@@ -169,12 +180,12 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 				{
 					Path:        filepath.Join(containerdEnvConfigPath, kubeletServiceName),
 					Permissions: 0400,
-					Content:     proxyEnv(""),
+					Content:     kubeletProxyEnv(),
 				},
 				{
 					Path:        filepath.Join(systemdDir, containerdServiceName),
 					Permissions: 0400,
-					Content:     proxyEnv(containerd),
+					Content:     containerdProxyEnv(),
 				},
 			},
 		},
@@ -261,30 +272,44 @@ func transformToken(clusterToken string) string {
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
 }
 
-func proxyEnv(service string) string {
+func kubeletProxyEnv() string {
 	var proxy []string
 	httpProxy := os.Getenv("HTTP_PROXY")
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	noProxy := os.Getenv("NO_PROXY")
 
-	prefix := ""
-	if service == containerdServiceName {
-		prefix = envPrefix
-	}
-
 	if len(httpProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(prefix+"HTTP_PROXY=%s", httpProxy))
-		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_HTTP_PROXY=%s", httpProxy))
+		proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
 	}
 
 	if len(httpsProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(prefix+"HTTPS_PROXY=%s", httpsProxy))
-		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_HTTPS_PROXY=%s", httpsProxy))
+		proxy = append(proxy, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
 	}
 
 	if len(noProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(prefix+"NO_PROXY=%s", noProxy))
-		proxy = append(proxy, fmt.Sprintf(prefix+"CONTAINERD_NO_PROXY=%s", httpProxy))
+		proxy = append(proxy, fmt.Sprintf("NO_PROXY=%s", noProxy))
+	}
+
+	return strings.Join(proxy, "\n")
+}
+
+func containerdProxyEnv() string {
+	var proxy []string
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	noProxy := os.Getenv("NO_PROXY")
+
+	proxy = append(proxy, "[Service]")
+	if len(httpProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTP_PROXY=%s"+"\"", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTPS_PROXY=%s"+"\"", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
 	}
 
 	return strings.Join(proxy, "\n")
