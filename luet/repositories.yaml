@@ -1,0 +1,7 @@
+repositories:
+  - name: kairos
+    type: docker
+    arch: amd64
+    cached: false
+    urls:
+      - quay.io/kairos/packages
