@@ -3,7 +3,7 @@ module github.com/kairos-io/kairos/provider-kubeadm
 go 1.18
 
 require (
-	github.com/kairos-io/kairos v1.0.0
+	github.com/kairos-io/kairos v1.24.3-56.0.20221029012927-185d6a2879c9
 	github.com/mudler/yip v0.11.3
 	github.com/sirupsen/logrus v1.9.0
 	gopkg.in/yaml.v2 v2.4.0
