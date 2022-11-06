@@ -2,12 +2,28 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"time"
+
+	"github.com/avast/retry-go"
+
+	v1 "k8s.io/api/core/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
+	kubeadmscheme "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/scheme"
+	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
+	"k8s.io/kubernetes/cmd/kubeadm/app/util/apiclient"
+
+	configutil "k8s.io/kubernetes/cmd/kubeadm/app/util/config"
 
 	kyaml "sigs.k8s.io/yaml"
 
@@ -32,6 +48,8 @@ func init() {
 }
 
 var configurationPath = "/opt/kubeadm"
+var defaultKubeconfigPath = "/etc/kubernetes/admin.conf"
+var controlPlaneEndpoint string
 
 type KubeadmConfig struct {
 	ClusterConfiguration kubeadmapiv3.ClusterConfiguration `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
@@ -45,6 +63,11 @@ func main() {
 	}
 
 	if err := plugin.Run(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	logrus.Info("updating kubeadm-config configmap")
+	if err := Retry(updateControlPlaneEndpoint, 10*time.Second, 50); err != nil {
 		logrus.Fatal(err)
 	}
 }
@@ -71,6 +94,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	}
 
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
+	controlPlaneEndpoint = cluster.ControlPlaneHost
 
 	stages = append(stages, preStage)
 
@@ -118,9 +142,6 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
 
 	joinCmd := fmt.Sprintf("kubeadm join --config %s --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests", filepath.Join(configurationPath, "kubeadm.yaml"))
-	if cluster.Role == clusterplugin.RoleControlPlane {
-		joinCmd = joinCmd + " --control-plane"
-	}
 
 	return []yip.Stage{
 		{
@@ -157,6 +178,9 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 		},
 	}
 	initCfg.CertificateKey = certificateKey
+	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
+		AdvertiseAddress: "0.0.0.0",
+	}
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
@@ -180,6 +204,9 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	if cluster.Role == clusterplugin.RoleControlPlane {
 		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
 			CertificateKey: getCertificateKey(cluster.ClusterToken),
+			LocalAPIEndpoint: kubeadmapiv3.APIEndpoint{
+				AdvertiseAddress: "0.0.0.0",
+			},
 		}
 	}
 
@@ -190,6 +217,53 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	_ = joinPrinter.PrintObj(&joinCfg, out)
 
 	return out.String()
+}
+
+func updateControlPlaneEndpoint() error {
+	// create k8s client and update the config map
+	config, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	configMap, err := clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(context.TODO(), constants.KubeadmConfigConfigMap, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	initcfg := &kubeadmapi.InitConfiguration{}
+
+	// gets ClusterConfiguration from kubeadm-config
+	clusterConfigurationData := configMap.Data[constants.ClusterConfigurationConfigMapKey]
+
+	if err = runtime.DecodeInto(kubeadmscheme.Codecs.UniversalDecoder(), []byte(clusterConfigurationData), &initcfg.ClusterConfiguration); err != nil {
+		return err
+	}
+
+	clusterCfg := initcfg.ClusterConfiguration
+	clusterCfg.ControlPlaneEndpoint = controlPlaneEndpoint
+
+	clusterConfigurationYaml, err := configutil.MarshalKubeadmConfigObject(&clusterCfg)
+	if err != nil {
+		return err
+	}
+
+	err = apiclient.MutateConfigMap(clientset, metav1.ObjectMeta{
+		Name:      constants.KubeadmConfigConfigMap,
+		Namespace: metav1.NamespaceSystem,
+	}, func(cm *v1.ConfigMap) error {
+		cm.Data[constants.ClusterConfigurationConfigMapKey] = string(clusterConfigurationYaml)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getCertificateKey(token string) string {
@@ -203,4 +277,20 @@ func transformToken(clusterToken string) string {
 	hash.Write([]byte(clusterToken))
 	hashString := hex.EncodeToString(hash.Sum(nil))
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
+}
+
+func Retry(operation func() error, delay time.Duration, attempts uint) error {
+	if err := retry.Do(
+		func() error {
+			return operation()
+		},
+		retry.DelayType(func(n uint, err error, config *retry.Config) time.Duration {
+			return delay
+		}),
+		retry.Attempts(attempts),
+		retry.LastErrorOnly(true),
+	); err != nil {
+		return err
+	}
+	return nil
 }
