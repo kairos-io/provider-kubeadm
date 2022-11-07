@@ -118,9 +118,6 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
 
 	joinCmd := fmt.Sprintf("kubeadm join --config %s --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests", filepath.Join(configurationPath, "kubeadm.yaml"))
-	if cluster.Role == clusterplugin.RoleControlPlane {
-		joinCmd = joinCmd + " --control-plane"
-	}
 
 	return []yip.Stage{
 		{
@@ -157,6 +154,10 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 		},
 	}
 	initCfg.CertificateKey = certificateKey
+	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
+		AdvertiseAddress: "0.0.0.0",
+	}
+	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
@@ -180,6 +181,9 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	if cluster.Role == clusterplugin.RoleControlPlane {
 		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
 			CertificateKey: getCertificateKey(cluster.ClusterToken),
+			LocalAPIEndpoint: kubeadmapiv3.APIEndpoint{
+				AdvertiseAddress: "0.0.0.0",
+			},
 		}
 	}
 
