@@ -8,7 +8,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
+	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/kairos-io/kairos/pkg/config"
 
 	"gopkg.in/yaml.v2"
 
@@ -32,18 +37,26 @@ import (
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 
-	"github.com/kairos-io/kairos/pkg/config"
 	"github.com/kairos-io/kairos/sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
 	"github.com/sirupsen/logrus"
 	bootstraptokenv1 "k8s.io/kubernetes/cmd/kubeadm/app/apis/bootstraptoken/v1"
 )
 
+var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/live"}
+
+const (
+	kubeletEnvConfigPath = "/etc/default"
+	envPrefix            = "Environment="
+	systemdDir           = "/etc/systemd/system/containerd.service.d"
+	kubeletServiceName   = "kubelet"
+	containerdEnv        = "http-proxy.conf"
+	K8S_NO_PROXY         = ".svc,.svc.cluster,.svc.cluster.local"
+)
+
 var (
 	scheme = runtime.NewScheme()
 )
-
-var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/live"}
 
 func init() {
 	_ = kubeadmapiv3.AddToScheme(scheme)
@@ -91,26 +104,54 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	var stages []yip.Stage
 	var kubeadmConfig KubeadmConfig
 
-	preStage := yip.Stage{
-		Systemctl: yip.Systemctl{
-			Enable: []string{"kubelet"},
-			Start:  []string{"containerd"},
-		},
-		Commands: []string{
-			"sysctl --system",
-			"modprobe overlay",
-			"modprobe br_netfilter",
-		},
-	}
-
 	if cluster.Options != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
+	_config, _ := config.Scan(config.Directories(configScanDir...))
+
+	if _config != nil {
+		for _, e := range _config.Env {
+			pair := strings.SplitN(e, "=", 2)
+			if len(pair) >= 2 {
+				os.Setenv(pair[0], pair[1])
+			}
+		}
+	}
+
+	preStage := []yip.Stage{
+		{
+			Name: "Set proxy env",
+			Files: []yip.File{
+				{
+					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
+					Permissions: 0400,
+					Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration),
+				},
+				{
+					Path:        filepath.Join(systemdDir, containerdEnv),
+					Permissions: 0400,
+					Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration),
+				},
+			},
+		},
+		{
+			Systemctl: yip.Systemctl{
+				Enable: []string{"kubelet"},
+				Start:  []string{"containerd"},
+			},
+			Commands: []string{
+				"sysctl --system",
+				"modprobe overlay",
+				"modprobe br_netfilter",
+			},
+		},
+	}
+
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
 
-	stages = append(stages, preStage)
+	stages = append(stages, preStage...)
 
 	if cluster.Role == clusterplugin.RoleInit {
 		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration)...)
@@ -294,4 +335,82 @@ func transformToken(clusterToken string) string {
 	hash.Write([]byte(clusterToken))
 	hashString := hex.EncodeToString(hash.Sum(nil))
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
+}
+
+func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+	var proxy []string
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	noProxy := getNoProxy(clusterCfg)
+
+	if len(httpProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf("NO_PROXY=%s", noProxy))
+	}
+
+	return strings.Join(proxy, "\n")
+}
+
+func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+	var proxy []string
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	noProxy := getNoProxy(clusterCfg)
+
+	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(noProxy) > 0 {
+		proxy = append(proxy, "[Service]")
+	}
+
+	if len(httpProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTP_PROXY=%s"+"\"", httpProxy))
+	}
+
+	if len(httpsProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTPS_PROXY=%s"+"\"", httpsProxy))
+	}
+
+	if len(noProxy) > 0 {
+		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
+	}
+
+	return strings.Join(proxy, "\n")
+}
+
+func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+
+	noProxy := os.Getenv("NO_PROXY")
+
+	cluster_cidr := clusterCfg.Networking.PodSubnet
+	service_cidr := clusterCfg.Networking.ServiceSubnet
+
+	if len(cluster_cidr) > 0 {
+		noProxy = noProxy + "," + cluster_cidr
+	}
+	if len(service_cidr) > 0 {
+		noProxy = noProxy + "," + service_cidr
+	}
+
+	noProxy = noProxy + "," + getNodeCIDR() + "," + K8S_NO_PROXY
+	return noProxy
+}
+
+func getNodeCIDR() string {
+	addrs, _ := net.InterfaceAddrs()
+	var result string
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				result = addr.String()
+				break
+			}
+		}
+	}
+	return result
 }
