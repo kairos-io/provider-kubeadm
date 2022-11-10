@@ -31,10 +31,7 @@ jobs:
           - quay.io/kairos/core-ubuntu-20-lts:v1.1.6
           - quay.io/kairos/core-ubuntu-22-lts:v1.1.6
         kubeadm-version:
-          - v1.22.15
-          - v1.23.12
           - v1.24.6
-          - v1.25.2
     steps:
       - uses: actions/checkout@v2
       - uses: docker-practice/actions-setup-docker@master
