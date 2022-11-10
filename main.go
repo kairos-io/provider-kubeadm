@@ -139,12 +139,12 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		{
 			Systemctl: yip.Systemctl{
 				Enable: []string{"kubelet"},
-				Start:  []string{"containerd"},
 			},
 			Commands: []string{
 				"sysctl --system",
 				"modprobe overlay",
 				"modprobe br_netfilter",
+				"systemctl restart containerd",
 			},
 		},
 	}
