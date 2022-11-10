@@ -144,6 +144,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"sysctl --system",
 				"modprobe overlay",
 				"modprobe br_netfilter",
+				"systemctl daemon-reload",
 				"systemctl restart containerd",
 			},
 		},
