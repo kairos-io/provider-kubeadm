@@ -84,6 +84,7 @@ docker:
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
     COPY luet/repositories.yaml /etc/luet/luet.yaml
+    COPY upgrade/upgrade.sh /opt/kubeadm/upgrade.sh
 
     RUN luet repo list \
         && luet install -y container-runtime/containerd \

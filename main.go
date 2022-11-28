@@ -51,7 +51,7 @@ const (
 	systemdDir           = "/etc/systemd/system/containerd.service.d"
 	kubeletServiceName   = "kubelet"
 	containerdEnv        = "http-proxy.conf"
-	K8S_NO_PROXY         = ".svc,.svc.cluster,.svc.cluster.local"
+	K8sNoProxy           = ".svc,.svc.cluster,.svc.cluster.local"
 )
 
 var (
@@ -148,6 +148,13 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"systemctl restart containerd",
 			},
 		},
+		{
+			If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
+			Name: "Create kubeadm sentinel version file",
+			Commands: []string{
+				"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+			},
+		},
 	}
 
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
@@ -185,11 +192,17 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 			},
 		},
 		{
-			Name: "Kubeadm Init",
+			Name: "Run Kubeadm Init",
 			If:   "[ ! -f /opt/kubeadm.init ]",
 			Commands: []string{
 				fmt.Sprintf("until $(%s > /dev/null ); do echo \"failed to apply kubeadm init, will retry in 10s\"; sleep 10; done;", initCmd),
 				"touch /opt/kubeadm.init",
+			},
+		},
+		{
+			Name: "Run Kubeadm Upgrade",
+			Commands: []string{
+				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
 			},
 		},
 	}
@@ -217,6 +230,12 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 			Commands: []string{
 				fmt.Sprintf("until $(%s > /dev/null ); do echo \"failed to apply kubeadm join, will retry in 10s\"; sleep 10; done;", joinCmd),
 				"touch /opt/kubeadm.join",
+			},
+		},
+		{
+			Name: "Run Kubeadm Upgrade",
+			Commands: []string{
+				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
 			},
 		},
 	}
@@ -398,7 +417,7 @@ func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 		noProxy = noProxy + "," + service_cidr
 	}
 
-	noProxy = noProxy + "," + getNodeCIDR() + "," + K8S_NO_PROXY
+	noProxy = noProxy + "," + getNodeCIDR() + "," + K8sNoProxy
 	return noProxy
 }
 
