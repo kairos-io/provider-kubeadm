@@ -33,6 +33,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
+	bootstrapapi "k8s.io/cluster-bootstrap/token/api"
+	kubeconfigutil "k8s.io/kubernetes/cmd/kubeadm/app/util/kubeconfig"
 
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
@@ -96,6 +98,14 @@ func main() {
 	}
 
 	if err := updateControlPlaneEndpoint(clusterConfig.Cluster.ControlPlaneHost); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := removeExpirationFromCertsSecret(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := updateControlPlaneEndpointClusterInfo(clusterConfig.Cluster.ControlPlaneHost); err != nil {
 		logrus.Fatal(err)
 	}
 }
@@ -341,6 +351,89 @@ func updateControlPlaneEndpoint(controlPlaneHost string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func removeExpirationFromCertsSecret() error {
+	// create k8s client and update the config map
+	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return err
+	}
+
+	secret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), constants.KubeadmCertsSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// get the bootstrap token owner reference
+	ownerRefSecretName := secret.OwnerReferences[0].Name
+
+	bootstrapTokenSecret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), ownerRefSecretName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	data := bootstrapTokenSecret.Data
+	delete(data, bootstrapapi.BootstrapTokenExpirationKey)
+
+	updatedSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ownerRefSecretName,
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: data,
+		Type: bootstrapapi.SecretTypeBootstrapToken,
+	}
+	if _, err = clientset.CoreV1().Secrets(metav1.NamespaceSystem).Update(context.TODO(), updatedSecret, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateControlPlaneEndpointClusterInfo(controlPlaneHost string) error {
+	// create k8s client and update the config map
+	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return err
+	}
+
+	configMap, err := clientset.CoreV1().ConfigMaps(metav1.NamespacePublic).Get(context.TODO(), bootstrapapi.ConfigMapClusterInfo, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	kubeconfig, err := clientcmd.Load([]byte(configMap.Data[bootstrapapi.KubeConfigKey]))
+	if err != nil {
+		return err
+	}
+
+	cluster := kubeconfigutil.GetClusterFromKubeConfig(kubeconfig)
+	cluster.Server = fmt.Sprintf("https://%s:6443", controlPlaneHost)
+
+	byteConfig, _ := clientcmd.Write(*kubeconfig)
+
+	err = apiclient.MutateConfigMap(clientset, metav1.ObjectMeta{
+		Name:      bootstrapapi.ConfigMapClusterInfo,
+		Namespace: metav1.NamespacePublic,
+	}, func(cm *v1.ConfigMap) error {
+		cm.Data[bootstrapapi.KubeConfigKey] = string(byteConfig)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
