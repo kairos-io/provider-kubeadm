@@ -262,6 +262,9 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 				ID:     substrs[1],
 				Secret: substrs[2],
 			},
+			TTL: &metav1.Duration{
+				Duration: 0,
+			},
 		},
 	}
 	initCfg.CertificateKey = certificateKey
