@@ -33,6 +33,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
+	bootstrapapi "k8s.io/cluster-bootstrap/token/api"
+	kubeconfigutil "k8s.io/kubernetes/cmd/kubeadm/app/util/kubeconfig"
 
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
@@ -51,7 +53,7 @@ const (
 	systemdDir           = "/etc/systemd/system/containerd.service.d"
 	kubeletServiceName   = "kubelet"
 	containerdEnv        = "http-proxy.conf"
-	K8S_NO_PROXY         = ".svc,.svc.cluster,.svc.cluster.local"
+	K8sNoProxy           = ".svc,.svc.cluster,.svc.cluster.local"
 )
 
 var (
@@ -96,6 +98,14 @@ func main() {
 	}
 
 	if err := updateControlPlaneEndpoint(clusterConfig.Cluster.ControlPlaneHost); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := removeExpirationFromCertsSecret(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := updateControlPlaneEndpointClusterInfo(clusterConfig.Cluster.ControlPlaneHost); err != nil {
 		logrus.Fatal(err)
 	}
 }
@@ -148,6 +158,13 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"systemctl restart containerd",
 			},
 		},
+		{
+			If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
+			Name: "Create kubeadm sentinel version file",
+			Commands: []string{
+				"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+			},
+		},
 	}
 
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
@@ -185,11 +202,17 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 			},
 		},
 		{
-			Name: "Kubeadm Init",
+			Name: "Run Kubeadm Init",
 			If:   "[ ! -f /opt/kubeadm.init ]",
 			Commands: []string{
 				fmt.Sprintf("until $(%s > /dev/null ); do echo \"failed to apply kubeadm init, will retry in 10s\"; sleep 10; done;", initCmd),
 				"touch /opt/kubeadm.init",
+			},
+		},
+		{
+			Name: "Run Kubeadm Upgrade",
+			Commands: []string{
+				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
 			},
 		},
 	}
@@ -219,6 +242,12 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 				"touch /opt/kubeadm.join",
 			},
 		},
+		{
+			Name: "Run Kubeadm Upgrade",
+			Commands: []string{
+				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
+			},
+		},
 	}
 }
 
@@ -232,6 +261,9 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 			Token: &bootstraptokenv1.BootstrapTokenString{
 				ID:     substrs[1],
 				Secret: substrs[2],
+			},
+			TTL: &metav1.Duration{
+				Duration: 0,
 			},
 		},
 	}
@@ -325,6 +357,89 @@ func updateControlPlaneEndpoint(controlPlaneHost string) error {
 	return nil
 }
 
+func removeExpirationFromCertsSecret() error {
+	// create k8s client and update the config map
+	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return err
+	}
+
+	secret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), constants.KubeadmCertsSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// get the bootstrap token owner reference
+	ownerRefSecretName := secret.OwnerReferences[0].Name
+
+	bootstrapTokenSecret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), ownerRefSecretName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	data := bootstrapTokenSecret.Data
+	delete(data, bootstrapapi.BootstrapTokenExpirationKey)
+
+	updatedSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ownerRefSecretName,
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: data,
+		Type: bootstrapapi.SecretTypeBootstrapToken,
+	}
+	if _, err = clientset.CoreV1().Secrets(metav1.NamespaceSystem).Update(context.TODO(), updatedSecret, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateControlPlaneEndpointClusterInfo(controlPlaneHost string) error {
+	// create k8s client and update the config map
+	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return err
+	}
+
+	configMap, err := clientset.CoreV1().ConfigMaps(metav1.NamespacePublic).Get(context.TODO(), bootstrapapi.ConfigMapClusterInfo, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	kubeconfig, err := clientcmd.Load([]byte(configMap.Data[bootstrapapi.KubeConfigKey]))
+	if err != nil {
+		return err
+	}
+
+	cluster := kubeconfigutil.GetClusterFromKubeConfig(kubeconfig)
+	cluster.Server = fmt.Sprintf("https://%s:6443", controlPlaneHost)
+
+	byteConfig, _ := clientcmd.Write(*kubeconfig)
+
+	err = apiclient.MutateConfigMap(clientset, metav1.ObjectMeta{
+		Name:      bootstrapapi.ConfigMapClusterInfo,
+		Namespace: metav1.NamespacePublic,
+	}, func(cm *v1.ConfigMap) error {
+		cm.Data[bootstrapapi.KubeConfigKey] = string(byteConfig)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getCertificateKey(token string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(token))
@@ -398,7 +513,7 @@ func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 		noProxy = noProxy + "," + service_cidr
 	}
 
-	noProxy = noProxy + "," + getNodeCIDR() + "," + K8S_NO_PROXY
+	noProxy = noProxy + "," + getNodeCIDR() + "," + K8sNoProxy
 	return noProxy
 }
 
