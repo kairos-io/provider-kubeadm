@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -119,17 +118,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
-	_config, _ := config.Scan(config.Directories(configScanDir...))
-
-	if _config != nil {
-		for _, e := range _config.Env {
-			pair := strings.SplitN(e, "=", 2)
-			if len(pair) >= 2 {
-				os.Setenv(pair[0], pair[1])
-			}
-		}
-	}
-
 	preStage := []yip.Stage{
 		{
 			Name: "Set proxy env",
@@ -137,12 +125,12 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				{
 					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
 					Permissions: 0400,
-					Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration),
+					Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
 				},
 				{
 					Path:        filepath.Join(systemdDir, containerdEnv),
 					Permissions: 0400,
-					Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration),
+					Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
 				},
 			},
 		},
@@ -453,11 +441,11 @@ func transformToken(clusterToken string) string {
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
 }
 
-func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
 	var proxy []string
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	noProxy := getNoProxy(clusterCfg)
+	httpProxy := proxyMap["HTTP_PROXY"]
+	httpsProxy := proxyMap["HTTP_PROXY"]
+	noProxy := getNoProxy(clusterCfg, proxyMap["NO_PROXY"])
 
 	if len(httpProxy) > 0 {
 		proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
@@ -474,11 +462,11 @@ func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 	return strings.Join(proxy, "\n")
 }
 
-func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
 	var proxy []string
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	noProxy := getNoProxy(clusterCfg)
+	httpProxy := proxyMap["HTTP_PROXY"]
+	httpsProxy := proxyMap["HTTP_PROXY"]
+	noProxy := getNoProxy(clusterCfg, proxyMap["NO_PROXY"])
 
 	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(noProxy) > 0 {
 		proxy = append(proxy, "[Service]")
@@ -499,9 +487,7 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 	return strings.Join(proxy, "\n")
 }
 
-func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
-
-	noProxy := os.Getenv("NO_PROXY")
+func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration, noProxy string) string {
 
 	cluster_cidr := clusterCfg.Networking.PodSubnet
 	service_cidr := clusterCfg.Networking.ServiceSubnet
