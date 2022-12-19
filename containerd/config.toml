@@ -1,11 +1,12 @@
 version = 2
-root="/var/lib/rancher/containerd"
+root="/opt/containerd"
 imports = ["/etc/containerd/conf.d/*.toml"]
 
 [plugins]
   [plugins."io.containerd.grpc.v1.cri"]
-    sandbox_image =  "k8s.gcr.io/pause:3.6"
-  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-    runtime_type = "io.containerd.runc.v2"
-  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-    SystemdCgroup = true
+    sandbox_image = "k8s.gcr.io/pause:3.6"
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+        BinaryName = "/opt/bin/runc"
+        SystemdCgroup = true
