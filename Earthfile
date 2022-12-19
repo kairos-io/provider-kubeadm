@@ -8,9 +8,9 @@ ARG IMAGE_REPOSITORY=quay.io/kairos
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
 
-ARG LUET_VERSION=0.32.4
-ARG GOLINT_VERSION=v1.46.2
-ARG GOLANG_VERSION=1.18
+ARG LUET_VERSION=0.33.0
+ARG GOLINT_VERSION=v1.50.1
+ARG GOLANG_VERSION=1.19
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
@@ -59,7 +59,7 @@ build-provider:
 
 lint:
     FROM golang:$GOLANG_VERSION
-    RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.46.2
+    RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.50.1
     WORKDIR /build
     COPY . .
     RUN golangci-lint run --timeout=3m
