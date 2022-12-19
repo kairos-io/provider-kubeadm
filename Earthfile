@@ -10,12 +10,13 @@ ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.33.0
 ARG GOLINT_VERSION=v1.50.1
-ARG GOLANG_VERSION=1.19
+ARG GOLANG_VERSION=1.19.2
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
 ARG BASE_IMAGE_TAG=$(echo $BASE_IMAGE | grep -o :.* | cut -c2-)
 ARG KUBEADM_VERSION_TAG=$(echo $KUBEADM_VERSION | sed s/+/-/)
+ARG FIPS_ENABLED=false
 
 build-cosign:
     FROM gcr.io/projectsigstore/cosign:v1.13.1
@@ -38,6 +39,10 @@ BUILD_GOLANG:
     ARG SRC
 
     ENV CGO_ENABLED=0
+
+    IF $FIPS_ENABLED
+        ENV GOEXPERIMENT=boringcrypto
+    END
 
     RUN go build -ldflags "-s -w" -o ${BIN} ./${SRC} && upx ${BIN}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
@@ -64,6 +69,48 @@ lint:
     COPY . .
     RUN golangci-lint run --timeout=3m
 
+DOWNLOAD_BINARIES:
+    COMMAND
+    IF $FIPS_ENABLED
+        RUN curl -L "https://storage.googleapis.com/spectro-fips/cri-tools-${CRICTL_VERSION}.tar.gz" | sudo tar -C /usr/bin/ -xz
+        RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubeadm
+        RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubelet
+        RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubectl
+    ELSE
+        RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
+        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
+        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
+        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl
+    END
+
+SETUP_CONTAINERD:
+    COMMAND
+    RUN mkdir -p /opt/cni/bin
+
+    IF $FIPS_ENABLED
+        RUN curl -sSL https://storage.googleapis.com/spectro-fips/containerd-1.6.4.tar.gz | sudo tar -C /opt/ -xz
+        RUN curl -SL -o runc https://storage.googleapis.com/spectro-fips/runc-1.1.4/runc
+        RUN curl -sSL https://storage.googleapis.com/spectro-fips/cni-plugins-1.1.1.tar.gz | sudo tar -C /opt/cni/bin/ -xz
+    ELSE
+        RUN curl -sSL https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
+        RUN curl -SL -o runc "https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
+        RUN curl -sSL https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz | sudo tar -C /opt/cni/bin/ -xz
+    END
+
+    RUN install -m 755 runc /opt/bin/runc
+    RUN curl -sSL "https://raw.githubusercontent.com/containerd/containerd/main/containerd.service" | sed "s?ExecStart=/usr/local/bin/containerd?ExecStart=/opt/bin/containerd?" | sudo tee /etc/systemd/system/containerd.service
+
+SAVE_IMAGE:
+    COMMAND
+    ARG VERSION
+    IF $FIPS_ENABLED
+        ARG PROVIDER_IMAGE_NAME=kubeadm-fips
+    ELSE
+        ARG PROVIDER_IMAGE_NAME=kubeadm
+    END
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-${PROVIDER_IMAGE_NAME}:${KUBEADM_VERSION_TAG}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-${PROVIDER_IMAGE_NAME}:${KUBEADM_VERSION_TAG}_${VERSION}
+
 docker:
     DO +VERSION
     ARG VERSION=$(cat VERSION)
@@ -71,10 +118,9 @@ docker:
     FROM $BASE_IMAGE
 
     WORKDIR /usr/bin
-    RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubelet
-    RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${KUBEADM_VERSION}/bin/linux/amd64/kubectl
+
+    DO +DOWNLOAD_BINARIES
+
     RUN chmod +x kubeadm
     RUN chmod +x kubelet
     RUN chmod +x kubectl
@@ -83,23 +129,13 @@ docker:
     RUN mkdir -p /etc/systemd/system/kubelet.service.d
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
-    COPY luet/repositories.yaml /etc/luet/luet.yaml
-    COPY upgrade/upgrade.sh /opt/kubeadm/upgrade.sh
-
-    RUN luet repo list \
-        && luet install -y container-runtime/containerd \
-        && luet cleanup \
-        && rm /etc/luet/luet.yaml
-
     WORKDIR /
 
-    RUN mkdir -p /usr/local/lib/systemd/system
-    RUN curl -sSL "https://raw.githubusercontent.com/containerd/containerd/main/containerd.service" | sudo tee /usr/local/lib/systemd/system/containerd.service
+    DO +SETUP_CONTAINERD
+
     COPY containerd/config.toml /etc/containerd/config.toml
 
-    RUN mkdir -p /usr/local/sbin
-    RUN curl -SL -o runc.amd64 "https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
-    RUN install -m 755 runc.amd64 /usr/local/sbin/runc
+    COPY upgrade/upgrade.sh /opt/kubeadm/upgrade.sh
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf
@@ -110,8 +146,7 @@ docker:
 
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
 
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}_${VERSION}
+    DO +SAVE_IMAGE --VERSION=$VERSION
 
 cosign:
     ARG --required ACTIONS_ID_TOKEN_REQUEST_TOKEN
@@ -138,13 +173,10 @@ cosign:
 
     RUN echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
 
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}
-    SAVE IMAGE --push $IMAGE_REPOSITORY/${BASE_IMAGE_NAME}-kubeadm:${KUBEADM_VERSION_TAG}_${VERSION}
+    DO +SAVE_IMAGE --VERSION=$VERSION
 
 docker-all-platforms:
      BUILD --platform=linux/amd64 +docker
-     BUILD --platform=linux/arm64 +docker
 
 cosign-all-platforms:
      BUILD --platform=linux/amd64 +cosign
-     BUILD --platform=linux/arm64 +cosign
