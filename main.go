@@ -465,7 +465,7 @@ func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[
 func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
 	var proxy []string
 	httpProxy := proxyMap["HTTP_PROXY"]
-	httpsProxy := proxyMap["HTTP_PROXY"]
+	httpsProxy := proxyMap["HTTPS_PROXY"]
 	noProxy := getNoProxy(clusterCfg, proxyMap["NO_PROXY"])
 
 	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(noProxy) > 0 {
