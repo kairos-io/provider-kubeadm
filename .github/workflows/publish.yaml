@@ -17,10 +17,10 @@ jobs:
           - quay.io/kairos/core-ubuntu-20-lts:v1.1.6
           - quay.io/kairos/core-ubuntu-22-lts:v1.1.6
         kubeadm-version:
-          - v1.22.15
-          - v1.23.12
-          - v1.24.6
-          - v1.25.2
+          - 1.22.15
+          - 1.23.12
+          - 1.24.6
+          - 1.25.2
     env:
       REGISTRY: quay.io
       REGISTRY_USER: ${{ secrets.QUAY_USERNAME }}
@@ -36,4 +36,6 @@ jobs:
       - run: env | grep REGISTRY >> .env
       - run: earthly --ci --push +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
       - run: earthly --ci +cosign-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
+      - run: earthly --ci --push +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }} --FIPS_ENABLED=true
+      - run: earthly --ci +cosign-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }} --FIPS_ENABLED=true
 
