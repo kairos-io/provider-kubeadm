@@ -489,17 +489,19 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 
 func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration, noProxy string) string {
 
-	cluster_cidr := clusterCfg.Networking.PodSubnet
-	service_cidr := clusterCfg.Networking.ServiceSubnet
+	if len(noProxy) > 0 {
+		cluster_cidr := clusterCfg.Networking.PodSubnet
+		service_cidr := clusterCfg.Networking.ServiceSubnet
 
-	if len(cluster_cidr) > 0 {
-		noProxy = noProxy + "," + cluster_cidr
-	}
-	if len(service_cidr) > 0 {
-		noProxy = noProxy + "," + service_cidr
-	}
+		if len(cluster_cidr) > 0 {
+			noProxy = noProxy + "," + cluster_cidr
+		}
+		if len(service_cidr) > 0 {
+			noProxy = noProxy + "," + service_cidr
+		}
 
-	noProxy = noProxy + "," + getNodeCIDR() + "," + K8sNoProxy
+		noProxy = noProxy + "," + getNodeCIDR() + "," + K8sNoProxy
+	}
 	return noProxy
 }
 
