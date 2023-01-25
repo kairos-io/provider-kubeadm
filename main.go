@@ -443,16 +443,30 @@ func transformToken(clusterToken string) string {
 
 func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
 	var proxy []string
+	var noProxy string
+	var isProxyConfigured bool
+
 	httpProxy := proxyMap["HTTP_PROXY"]
 	httpsProxy := proxyMap["HTTP_PROXY"]
-	noProxy := getNoProxy(clusterCfg, proxyMap["NO_PROXY"])
+	userNoProxy := proxyMap["NO_PROXY"]
+	defaultNoProxy := getDefaultNoProxy(clusterCfg)
 
 	if len(httpProxy) > 0 {
 		proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
+		isProxyConfigured = true
 	}
 
 	if len(httpsProxy) > 0 {
 		proxy = append(proxy, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
+		isProxyConfigured = true
+	}
+
+	if isProxyConfigured {
+		noProxy = defaultNoProxy
+	}
+
+	if len(userNoProxy) > 0 {
+		noProxy = noProxy + "," + userNoProxy
 	}
 
 	if len(noProxy) > 0 {
@@ -464,12 +478,17 @@ func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[
 
 func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
 	var proxy []string
+	var isProxyConfigured bool
+	var noProxy string
+
 	httpProxy := proxyMap["HTTP_PROXY"]
 	httpsProxy := proxyMap["HTTPS_PROXY"]
-	noProxy := getNoProxy(clusterCfg, proxyMap["NO_PROXY"])
+	userNoProxy := proxyMap["NO_PROXY"]
+	defaultNoProxy := getDefaultNoProxy(clusterCfg)
 
-	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(noProxy) > 0 {
+	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(userNoProxy) > 0 {
 		proxy = append(proxy, "[Service]")
+		isProxyConfigured = true
 	}
 
 	if len(httpProxy) > 0 {
@@ -480,6 +499,14 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTPS_PROXY=%s"+"\"", httpsProxy))
 	}
 
+	if isProxyConfigured {
+		noProxy = defaultNoProxy
+	}
+
+	if len(userNoProxy) > 0 {
+		noProxy = noProxy + "," + userNoProxy
+	}
+
 	if len(noProxy) > 0 {
 		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
 	}
@@ -487,7 +514,8 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 	return strings.Join(proxy, "\n")
 }
 
-func getNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration, noProxy string) string {
+func getDefaultNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+	var noProxy string
 
 	cluster_cidr := clusterCfg.Networking.PodSubnet
 	service_cidr := clusterCfg.Networking.ServiceSubnet
