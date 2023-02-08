@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -435,7 +434,7 @@ func getCertificateKey(token string) string {
 }
 
 func transformToken(clusterToken string) string {
-	hash := md5.New()
+	hash := sha256.New()
 	hash.Write([]byte(clusterToken))
 	hashString := hex.EncodeToString(hash.Sum(nil))
 	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
