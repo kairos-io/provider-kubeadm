@@ -8,7 +8,7 @@ ARG IMAGE_REPOSITORY=quay.io/kairos
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
 
-ARG LUET_VERSION=0.33.0
+ARG LUET_VERSION=0.34.0
 ARG GOLINT_VERSION=v1.50.1
 ARG GOLANG_VERSION=1.19.2
 
@@ -137,7 +137,7 @@ docker:
 
     COPY containerd/config.toml /etc/containerd/config.toml
 
-    COPY upgrade/upgrade.sh /opt/kubeadm/upgrade.sh
+    COPY scripts/* /opt/kubeadm/
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf

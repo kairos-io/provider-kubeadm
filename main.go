@@ -143,6 +143,8 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"modprobe br_netfilter",
 				"systemctl daemon-reload",
 				"systemctl restart containerd",
+				"chmod +x /opt/kubeadm/import.sh",
+				"/bin/sh /opt/kubeadm/import.sh",
 			},
 		},
 		{
