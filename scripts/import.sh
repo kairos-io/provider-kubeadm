@@ -1,10 +1,8 @@
 #!/bin/bash -x
 
-LOG_FILE=/var/log/import.log
-exec 1>$LOG_FILE 2>&1
-
+CONTENT_PATH=$1
 # find all tar files recursively
-for tarfile in $(find /opt/content -name "*.tar" -type f)
+for tarfile in $(find $CONTENT_PATH -name "*.tar" -type f)
 do
   # try to import the tar file into containerd up to ten times
   for i in {1..10}

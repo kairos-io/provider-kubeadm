@@ -98,7 +98,6 @@ SETUP_CONTAINERD:
         RUN curl -sSL https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz | sudo tar -C /opt/cni/bin/ -xz
     END
 
-    RUN cp -R /opt/bin/ctr /usr/bin/ctr
     RUN install -m 755 runc /opt/bin/runc
     RUN curl -sSL "https://raw.githubusercontent.com/containerd/containerd/main/containerd.service" | sed "s?ExecStart=/usr/local/bin/containerd?ExecStart=/opt/bin/containerd?" | sudo tee /etc/systemd/system/containerd.service
 
@@ -136,7 +135,7 @@ docker:
     DO +SETUP_CONTAINERD
 
     COPY containerd/config.toml /etc/containerd/config.toml
-
+    RUN cp -R /opt/bin/ctr /usr/bin/ctr
     COPY scripts/* /opt/kubeadm/
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
