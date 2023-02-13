@@ -111,6 +111,7 @@ func main() {
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	var stages []yip.Stage
 	var kubeadmConfig KubeadmConfig
+	var importStage yip.Stage
 
 	if cluster.Options != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
@@ -143,18 +144,31 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"modprobe br_netfilter",
 				"systemctl daemon-reload",
 				"systemctl restart containerd",
-				"chmod +x /opt/kubeadm/import.sh",
-				"/bin/sh /opt/kubeadm/import.sh",
 			},
-		},
-		{
-			If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
-			Name: "Create kubeadm sentinel version file",
+		}}
+
+	if cluster.ImportLocalImages {
+		if cluster.LocalImagesPath == "" {
+			cluster.LocalImagesPath = "/opt/content/images"
+		}
+
+		importStage = yip.Stage{
 			Commands: []string{
-				"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+				"chmod +x /opt/kubeadm/import.sh",
+				fmt.Sprintf("/bin/sh /opt/kubeadm/import.sh %s > /var/log/import.log", cluster.LocalImagesPath),
 			},
-		},
+			If: fmt.Sprintf("[  -d %s ]", cluster.LocalImagesPath),
+		}
+		preStage = append(preStage, importStage)
 	}
+
+	preStage = append(preStage, yip.Stage{
+		If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
+		Name: "Create kubeadm sentinel version file",
+		Commands: []string{
+			"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+		},
+	})
 
 	cluster.ClusterToken = transformToken(cluster.ClusterToken)
 
