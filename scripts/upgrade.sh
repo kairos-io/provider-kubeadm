@@ -25,11 +25,14 @@ run_upgrade() {
 
     # Try to create an empty configmap in default namespace which will act as a lock, until it succeeds.
     # Once a node creates a configmap, other nodes will remain at this step until the first node deletes the configmap when upgrade completes.
-    until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock > /dev/null
-    do
-      echo "failed to create configmap for upgrade lock, retrying in 60 sec"
-      sleep 60
-    done
+    if [ "$NODE_ROLE" != "worker" ]
+    then
+      until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock > /dev/null
+      do
+        echo "failed to create configmap for upgrade lock, retrying in 60 sec"
+        sleep 60
+      done
+    fi
 
     # Upgrade loop, runs until both stored and current is same
     until [ "$current_version" = "$old_version" ]
@@ -61,7 +64,10 @@ run_upgrade() {
             echo "upgrade success"
 
             # Delete the configmap lock once the upgrade completes
-            kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock
+            if [ "$NODE_ROLE" != "worker" ]
+            then
+              kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock
+            fi
         else
             echo "upgrade failed, retrying in 60 seconds"
             sleep 60
