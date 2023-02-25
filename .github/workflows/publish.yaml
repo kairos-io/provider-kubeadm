@@ -30,7 +30,7 @@ jobs:
       - uses: docker-practice/actions-setup-docker@master
       - uses: earthly/actions-setup@v1
         with:
-          version: "latest"
+          version: "v0.6.30"
       - run: echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
       - run: env | grep ACTIONS_ID_TOKEN_REQUEST > .env
       - run: env | grep REGISTRY >> .env
