@@ -18,7 +18,7 @@ jobs:
       - uses: docker-practice/actions-setup-docker@master
       - uses: earthly/actions-setup@v1
         with:
-          version: "latest"
+          version: "v0.6.30"
       - run: earthly --ci +lint
   build:
     runs-on: ubuntu-latest
@@ -37,6 +37,6 @@ jobs:
       - uses: docker-practice/actions-setup-docker@master
       - uses: earthly/actions-setup@v1
         with:
-          version: "latest"
+          version: "v0.6.30"
       - run: earthly --ci +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
       - run: earthly --ci +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }} --FIPS_ENABLED=true
