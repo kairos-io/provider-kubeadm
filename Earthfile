@@ -63,6 +63,14 @@ build-provider:
     FROM +go-deps
     DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go
 
+build-provider-package:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
+    FROM scratch
+    COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
+    COPY scripts/* /opt/kubeadm/
+    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:latest
+    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}
 lint:
     FROM golang:$GOLANG_VERSION
     RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.50.1
@@ -178,6 +186,10 @@ cosign:
 
 docker-all-platforms:
      BUILD --platform=linux/amd64 +docker
+
+provider-package-all-platforms:
+     BUILD --platform=linux/amd64 +build-provider-package
+     BUILD --platform=linux/arm64 +build-provider-package
 
 cosign-all-platforms:
      BUILD --platform=linux/amd64 +cosign
