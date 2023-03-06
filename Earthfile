@@ -138,6 +138,8 @@ docker:
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
     COPY scripts/* /opt/kubeadm/
 
+    RUN sh /opt/kubeadm/images.sh
+
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf
 
