@@ -137,6 +137,7 @@ docker:
     COPY containerd/config.toml /etc/containerd/config.toml
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
     COPY scripts/* /opt/kubeadm/
+    RUN bash /opt/kubeadm/kube-images-load.sh ${KUBEADM_VERSION}
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf

@@ -162,6 +162,13 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		preStage = append(preStage, importStage)
 	}
 
+	// import k8s images
+	preStage = append(preStage, yip.Stage{
+		Commands: []string{
+			"chmod +x /opt/kubeadm/import.sh && /bin/sh /opt/kubeadm/import.sh /opt/kubeadm/kube-images > /var/log/import-kube-images.log",
+		},
+	})
+
 	preStage = append(preStage, yip.Stage{
 		If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
 		Name: "Create kubeadm sentinel version file",
