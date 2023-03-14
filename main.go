@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,29 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kairos-io/kairos/pkg/config"
-
-	"gopkg.in/yaml.v2"
-
-	v1 "k8s.io/api/core/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
-	kubeadmscheme "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/scheme"
-	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/kubernetes/cmd/kubeadm/app/util/apiclient"
-
-	configutil "k8s.io/kubernetes/cmd/kubeadm/app/util/config"
-
 	kyaml "sigs.k8s.io/yaml"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
-	bootstrapapi "k8s.io/cluster-bootstrap/token/api"
-	kubeconfigutil "k8s.io/kubernetes/cmd/kubeadm/app/util/kubeconfig"
-
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 
@@ -42,8 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 	bootstraptokenv1 "k8s.io/kubernetes/cmd/kubeadm/app/apis/bootstraptoken/v1"
 )
-
-var configScanDir = []string{"/oem", "/usr/local/cloud-config", "/run/initramfs/live"}
 
 const (
 	kubeletEnvConfigPath = "/etc/default"
@@ -63,7 +42,7 @@ func init() {
 }
 
 var configurationPath = "/opt/kubeadm"
-var defaultKubeconfigPath = "/etc/kubernetes/admin.conf"
+var helperScriptPath = "/opt/kubeadm/scripts"
 
 type KubeadmConfig struct {
 	ClusterConfiguration kubeadmapiv3.ClusterConfiguration `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
@@ -77,33 +56,6 @@ func main() {
 	}
 
 	if err := plugin.Run(); err != nil {
-		logrus.Fatal(err)
-	}
-
-	c, err := config.Scan(config.Directories(configScanDir...))
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	var clusterConfig clusterplugin.Config
-
-	if err := yaml.Unmarshal([]byte(c.String()), &clusterConfig); err != nil {
-		logrus.Fatal(err)
-	}
-
-	if clusterConfig.Cluster.Role != clusterplugin.RoleInit {
-		return
-	}
-
-	if err := updateControlPlaneEndpoint(clusterConfig.Cluster.ControlPlaneHost); err != nil {
-		logrus.Fatal(err)
-	}
-
-	if err := removeExpirationFromCertsSecret(); err != nil {
-		logrus.Fatal(err)
-	}
-
-	if err := updateControlPlaneEndpointClusterInfo(clusterConfig.Cluster.ControlPlaneHost); err != nil {
 		logrus.Fatal(err)
 	}
 }
@@ -135,6 +87,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 			},
 		},
 		{
+			Name: "Run Pre Kubeadm Commands",
 			Systemctl: yip.Systemctl{
 				Enable: []string{"kubelet"},
 			},
@@ -154,18 +107,20 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 		importStage = yip.Stage{
 			Commands: []string{
-				"chmod +x /opt/kubeadm/import.sh",
-				fmt.Sprintf("/bin/sh /opt/kubeadm/import.sh %s > /var/log/import.log", cluster.LocalImagesPath),
+				fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
+				fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(helperScriptPath, "import.sh"), cluster.LocalImagesPath),
 			},
-			If: fmt.Sprintf("[  -d %s ]", cluster.LocalImagesPath),
+			If: fmt.Sprintf("[ -d %s ]", cluster.LocalImagesPath),
 		}
 		preStage = append(preStage, importStage)
 	}
 
 	// import k8s images
 	preStage = append(preStage, yip.Stage{
+		Name: "Run Load Kube Images",
 		Commands: []string{
-			"chmod +x /opt/kubeadm/import.sh && /bin/sh /opt/kubeadm/import.sh /opt/kubeadm/kube-images > /var/log/import-kube-images.log",
+			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s /opt/kubeadm/kube-images > /var/log/import-kube-images.log", filepath.Join(helperScriptPath, "import.sh")),
 		},
 	})
 
@@ -199,7 +154,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) []yip.Stage {
 	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg)
-	initCmd := fmt.Sprintf("kubeadm init --config %s --upload-certs --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests", filepath.Join(configurationPath, "kubeadm.yaml"))
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Init Config File",
@@ -215,14 +169,20 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 			Name: "Run Kubeadm Init",
 			If:   "[ ! -f /opt/kubeadm.init ]",
 			Commands: []string{
-				fmt.Sprintf("until $(%s > /dev/null ); do echo \"failed to apply kubeadm init, will retry in 10s\"; sleep 10; done;", initCmd),
+				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-init.sh")),
 				"touch /opt/kubeadm.init",
+			},
+		},
+		{
+			Name: "Run Post Kubeadm Init",
+			Commands: []string{
+				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-post-init.sh"), cluster.ControlPlaneHost),
 			},
 		},
 		{
 			Name: "Run Kubeadm Upgrade",
 			Commands: []string{
-				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
+				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
 			},
 		},
 	}
@@ -230,9 +190,6 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 
 func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {
 	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
-
-	joinCmd := fmt.Sprintf("kubeadm join --config %s --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests", filepath.Join(configurationPath, "kubeadm.yaml"))
-
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Join Config File",
@@ -248,14 +205,14 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 			Name: "Kubeadm Join",
 			If:   "[ ! -f /opt/kubeadm.join ]",
 			Commands: []string{
-				fmt.Sprintf("until $(%s > /dev/null ); do echo \"failed to apply kubeadm join, will retry in 10s\"; sleep 10; done;", joinCmd),
+				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-join.sh")),
 				"touch /opt/kubeadm.join",
 			},
 		},
 		{
 			Name: "Run Kubeadm Upgrade",
 			Commands: []string{
-				fmt.Sprintf("sh %s %s", filepath.Join(configurationPath, "upgrade.sh"), cluster.Role),
+				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
 			},
 		},
 	}
@@ -318,136 +275,6 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	_ = joinPrinter.PrintObj(&joinCfg, out)
 
 	return out.String()
-}
-
-func updateControlPlaneEndpoint(controlPlaneHost string) error {
-	// create k8s client and update the config map
-	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(clientConfig)
-	if err != nil {
-		return err
-	}
-
-	configMap, err := clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(context.TODO(), constants.KubeadmConfigConfigMap, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	initcfg := &kubeadmapi.InitConfiguration{}
-
-	// gets ClusterConfiguration from kubeadm-config
-	clusterConfigurationData := configMap.Data[constants.ClusterConfigurationConfigMapKey]
-
-	if err = runtime.DecodeInto(kubeadmscheme.Codecs.UniversalDecoder(), []byte(clusterConfigurationData), &initcfg.ClusterConfiguration); err != nil {
-		return err
-	}
-
-	clusterCfg := initcfg.ClusterConfiguration
-	clusterCfg.ControlPlaneEndpoint = controlPlaneHost
-
-	clusterConfigurationYaml, err := configutil.MarshalKubeadmConfigObject(&clusterCfg)
-	if err != nil {
-		return err
-	}
-
-	err = apiclient.MutateConfigMap(clientset, metav1.ObjectMeta{
-		Name:      constants.KubeadmConfigConfigMap,
-		Namespace: metav1.NamespaceSystem,
-	}, func(cm *v1.ConfigMap) error {
-		cm.Data[constants.ClusterConfigurationConfigMapKey] = string(clusterConfigurationYaml)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func removeExpirationFromCertsSecret() error {
-	// create k8s client and update the config map
-	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(clientConfig)
-	if err != nil {
-		return err
-	}
-
-	secret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), constants.KubeadmCertsSecret, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	// get the bootstrap token owner reference
-	ownerRefSecretName := secret.OwnerReferences[0].Name
-
-	bootstrapTokenSecret, err := clientset.CoreV1().Secrets(metav1.NamespaceSystem).Get(context.TODO(), ownerRefSecretName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	data := bootstrapTokenSecret.Data
-	delete(data, bootstrapapi.BootstrapTokenExpirationKey)
-
-	updatedSecret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ownerRefSecretName,
-			Namespace: metav1.NamespaceSystem,
-		},
-		Data: data,
-		Type: bootstrapapi.SecretTypeBootstrapToken,
-	}
-	if _, err = clientset.CoreV1().Secrets(metav1.NamespaceSystem).Update(context.TODO(), updatedSecret, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-	return nil
-}
-
-func updateControlPlaneEndpointClusterInfo(controlPlaneHost string) error {
-	// create k8s client and update the config map
-	clientConfig, err := clientcmd.BuildConfigFromFlags("", defaultKubeconfigPath)
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(clientConfig)
-	if err != nil {
-		return err
-	}
-
-	configMap, err := clientset.CoreV1().ConfigMaps(metav1.NamespacePublic).Get(context.TODO(), bootstrapapi.ConfigMapClusterInfo, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	kubeconfig, err := clientcmd.Load([]byte(configMap.Data[bootstrapapi.KubeConfigKey]))
-	if err != nil {
-		return err
-	}
-
-	cluster := kubeconfigutil.GetClusterFromKubeConfig(kubeconfig)
-	cluster.Server = fmt.Sprintf("https://%s:6443", controlPlaneHost)
-
-	byteConfig, _ := clientcmd.Write(*kubeconfig)
-
-	err = apiclient.MutateConfigMap(clientset, metav1.ObjectMeta{
-		Name:      bootstrapapi.ConfigMapClusterInfo,
-		Namespace: metav1.NamespacePublic,
-	}, func(cm *v1.ConfigMap) error {
-		cm.Data[bootstrapapi.KubeConfigKey] = string(byteConfig)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func getCertificateKey(token string) string {
