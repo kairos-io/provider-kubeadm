@@ -1,5 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
+exec   > >(tee -ia /var/log/kube-upgrade.log)
+exec  2> >(tee -ia /var/log/kube-upgrade.log >& 2)
+exec 19>> /var/log/kube-upgrade.log
+
+export BASH_XTRACEFD="19"
 set -ex
 
 NODE_ROLE=$1

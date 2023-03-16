@@ -10,7 +10,7 @@ ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.34.0
 ARG GOLINT_VERSION=v1.50.1
-ARG GOLANG_VERSION=1.19.2
+ARG GOLANG_VERSION=1.19.7
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
@@ -142,10 +142,18 @@ docker:
 
     DO +SETUP_CONTAINERD
 
+    ENV OS_ID=${BASE_IMAGE_NAME}-kubeadm
+    ENV OS_NAME=$OS_ID:${BASE_IMAGE_TAG}
+    ENV OS_REPO=${IMAGE_REPOSITORY}
+    ENV OS_VERSION=${KUBEADM_VERSION_TAG}_${VERSION}
+    ENV OS_LABEL=${BASE_IMAGE_TAG}_${KUBEADM_VERSION_TAG}_${VERSION}
+    RUN envsubst >/etc/os-release </usr/lib/os-release.tmpl
+
     COPY containerd/config.toml /etc/containerd/config.toml
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
-    COPY scripts/* /opt/kubeadm/
-    RUN bash /opt/kubeadm/kube-images-load.sh ${KUBEADM_VERSION}
+    RUN mkdir -p /opt/kubeadm/scripts
+    COPY scripts/* /opt/kubeadm/scripts/
+    RUN bash /opt/kubeadm/scripts/kube-images-load.sh ${KUBEADM_VERSION}
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf
