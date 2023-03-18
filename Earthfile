@@ -19,6 +19,10 @@ ARG KUBEADM_VERSION_TAG=$(echo $KUBEADM_VERSION | sed s/+/-/)
 ARG FIPS_ENABLED=false
 ARG PROVIDER_IMAGE_NAME=kubeadm
 
+luet:
+    FROM quay.io/luet/base:$LUET_VERSION
+    SAVE ARTIFACT /usr/bin/luet /luet
+
 build-cosign:
     FROM gcr.io/projectsigstore/cosign:v1.13.1
     SAVE ARTIFACT /ko-app/cosign cosign
@@ -137,6 +141,7 @@ docker:
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sudo tee /etc/systemd/system/kubelet.service
     RUN mkdir -p /etc/systemd/system/kubelet.service.d
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    COPY +luet/luet /usr/bin/luet
 
     WORKDIR /
 
