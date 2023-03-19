@@ -175,8 +175,10 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 		},
 		{
 			Name: "Run Post Kubeadm Init",
+			If:   "[ ! -f /opt/post-kubeadm.init ]",
 			Commands: []string{
 				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-post-init.sh"), cluster.ControlPlaneHost),
+				"touch /opt/post-kubeadm.init",
 			},
 		},
 		{
