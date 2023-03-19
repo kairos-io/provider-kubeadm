@@ -49,7 +49,7 @@ run_upgrade() {
         then
             # The current api version is stored in kubeadm-config configmap
             # This is being used to check whether the current cp node will run 'upgrade apply' or not
-            master_api_version=$(kubectl --kubeconfig /etc/kubernetes/admin.conf get cm kubeadm-config -n kube-system -o yaml | grep kubernetesVersion | tr -s " " | cut -d' ' -f 3)
+            master_api_version=$(kubectl --kubeconfig /etc/kubernetes/admin.conf get cm kubeadm-config -n kube-system -o yaml | grep -m 1 kubernetesVersion | tr -s " " | cut -d' ' -f 3)
             if [ "$master_api_version" = "" ]; then
               echo "master api version empty, retrying in 60 seconds"
               sleep 60
