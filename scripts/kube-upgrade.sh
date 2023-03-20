@@ -33,7 +33,7 @@ run_upgrade() {
     # Once a node creates a configmap, other nodes will remain at this step until the first node deletes the configmap when upgrade completes.
     if [ "$NODE_ROLE" != "worker" ]
     then
-      until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock --from-literal=node="${CURRENT_NODE_NAME}" > /dev/null
+      until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock -n kube-system --from-literal=node="${CURRENT_NODE_NAME}" > /dev/null
       do
         upgrade_node=$(get_current_upgrading_node_name)
         if [ "$upgrade_node" = "$CURRENT_NODE_NAME" ]; then
@@ -77,7 +77,7 @@ run_upgrade() {
             # Delete the configmap lock once the upgrade completes
             if [ "$NODE_ROLE" != "worker" ]
             then
-              kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock
+              kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system
             fi
         else
             echo "upgrade failed, retrying in 60 seconds"
@@ -87,7 +87,7 @@ run_upgrade() {
 }
 
 get_current_upgrading_node_name() {
-  kubectl get configmap upgrade-lock --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
+  kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
 }
 
 run_upgrade
