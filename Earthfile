@@ -72,7 +72,7 @@ build-provider-package:
     ARG VERSION=$(cat VERSION)
     FROM scratch
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
-    COPY scripts/* /opt/kubeadm/scripts
+    COPY scripts/ /opt/kubeadm/scripts/
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:latest
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}
 lint:
