@@ -5,7 +5,7 @@ exec  2> >(tee -ia /var/log/kube-upgrade.log >& 2)
 exec 19>> /var/log/kube-upgrade.log
 
 export BASH_XTRACEFD="19"
-set -ex
+set -x
 
 NODE_ROLE=$1
 CURRENT_NODE_NAME=$(cat /etc/hostname)
