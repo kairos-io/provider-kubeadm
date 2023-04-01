@@ -7,7 +7,7 @@ do
   # try to import the tar file into containerd up to ten times
   for i in {1..10}
   do
-    ctr -n k8s.io image import $tarfile --all-platforms
+    /opt/bin/ctr -n k8s.io image import $tarfile --all-platforms
     if [ $? -eq 0 ]; then
       echo "Import successful: $tarfile (attempt $i)"
       break
