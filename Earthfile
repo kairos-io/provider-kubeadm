@@ -4,7 +4,6 @@ FROM alpine
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE=quay.io/kairos/core-opensuse-leap:latest
 ARG IMAGE_REPOSITORY=quay.io/kairos
-
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
 
@@ -85,7 +84,7 @@ lint:
 DOWNLOAD_BINARIES:
     COMMAND
     IF $FIPS_ENABLED
-        RUN curl -L "https://storage.googleapis.com/spectro-fips/cri-tools-${CRICTL_VERSION}.tar.gz" | sudo tar -C /usr/bin/ -xz
+        RUN curl -L "https://storage.googleapis.com/spectro-fips/cri-tools/v${CRICTL_VERSION}/cri-tools-${CRICTL_VERSION}.tar.gz" | sudo tar -C /usr/bin/ -xz
         RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubeadm
         RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubelet
         RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubectl
@@ -101,9 +100,9 @@ SETUP_CONTAINERD:
     RUN mkdir -p /opt/cni/bin
 
     IF $FIPS_ENABLED
-        RUN curl -sSL https://storage.googleapis.com/spectro-fips/containerd-1.6.4.tar.gz | sudo tar -C /opt/ -xz
+        RUN curl -sSL https://storage.googleapis.com/spectro-fips/containerd/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
         RUN curl -SL -o runc https://storage.googleapis.com/spectro-fips/runc-1.1.4/runc
-        RUN curl -sSL https://storage.googleapis.com/spectro-fips/cni-plugins-1.1.1.tar.gz | sudo tar -C /opt/cni/bin/ -xz
+        RUN curl -sSL https://storage.googleapis.com/spectro-fips/cni-plugins/v1.1.1/cni-plugins-1.1.1-linux-amd64.tar.gz | sudo tar -C /opt/cni/bin/ -xz
     ELSE
         RUN curl -sSL https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
         RUN curl -SL -o runc "https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
