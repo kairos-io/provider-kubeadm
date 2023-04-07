@@ -1,2 +1,2 @@
-# C3OS Kubeadm Cluster Plugin
-c3os provider for Kubeadm
+# Kairos Kubeadm Cluster Plugin
+Kairos provider for Kubeadm
