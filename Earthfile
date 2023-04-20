@@ -151,7 +151,7 @@ docker:
     ENV OS_REPO=${IMAGE_REPOSITORY}
     ENV OS_VERSION=${KUBEADM_VERSION_TAG}_${VERSION}
     ENV OS_LABEL=${BASE_IMAGE_TAG}_${KUBEADM_VERSION_TAG}_${VERSION}
-    RUN envsubst >/etc/os-release </usr/lib/os-release.tmpl
+    RUN envsubst >>/etc/os-release </usr/lib/os-release.tmpl
 
     COPY containerd/config.toml /etc/containerd/config.toml
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
