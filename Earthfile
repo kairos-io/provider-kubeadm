@@ -76,10 +76,10 @@ build-provider-package:
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}
 lint:
     FROM golang:$GOLANG_VERSION
-    RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.50.1
+    RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
     WORKDIR /build
     COPY . .
-    RUN golangci-lint run --timeout=3m
+    RUN golangci-lint run --timeout=5m
 
 DOWNLOAD_BINARIES:
     COMMAND
