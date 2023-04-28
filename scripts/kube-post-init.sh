@@ -25,8 +25,3 @@ kubectl get cm -n kube-public cluster-info -o yaml | sed "s/^\( *\)server.*/\1se
 kubectl delete cm -n kube-public cluster-info && kubectl apply -f /opt/kubeadm/cluster-info.yaml && rm /opt/kubeadm/cluster-info.yaml
 
 echo "updated cluster-info server with ${host}"
-
-kubectl get cm -n kube-system kube-proxy -o yaml | sed "s/^\( *\)server.*/\1server: https:\/\/${host}:6443/" > /opt/kubeadm/kube-proxy.yaml
-kubectl delete cm -n kube-system kube-proxy && kubectl apply -f /opt/kubeadm/kube-proxy.yaml && rm /opt/kubeadm/kube-proxy.yaml
-
-echo "updated kube-proxy server with ${host}"
