@@ -37,6 +37,11 @@ var (
 	scheme = runtime.NewScheme()
 )
 
+const (
+	BootBefore   = "boot.before"
+	NetworkAfter = "network.after"
+)
+
 func init() {
 	_ = kubeadmapiv3.AddToScheme(scheme)
 }
@@ -61,7 +66,7 @@ func main() {
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
-	var stages []yip.Stage
+	var stages, preStage []yip.Stage
 	var kubeadmConfig KubeadmConfig
 	var importStage yip.Stage
 
@@ -70,14 +75,17 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
-	preStage := []yip.Stage{
-		{
+	stage := BootBefore
+	proxySet := kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env)
+	if len(proxySet) > 0 {
+		stage = NetworkAfter
+		preStage = append(preStage, yip.Stage{
 			Name: "Set proxy env",
 			Files: []yip.File{
 				{
 					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
 					Permissions: 0400,
-					Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
+					Content:     proxySet,
 				},
 				{
 					Path:        filepath.Join(systemdDir, containerdEnv),
@@ -85,20 +93,22 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 					Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
 				},
 			},
+		})
+	}
+
+	preStage = append(preStage, yip.Stage{
+		Name: "Run Pre Kubeadm Commands",
+		Systemctl: yip.Systemctl{
+			Enable: []string{"kubelet"},
 		},
-		{
-			Name: "Run Pre Kubeadm Commands",
-			Systemctl: yip.Systemctl{
-				Enable: []string{"kubelet"},
-			},
-			Commands: []string{
-				"sysctl --system",
-				"modprobe overlay",
-				"modprobe br_netfilter",
-				"systemctl daemon-reload",
-				"systemctl restart containerd",
-			},
-		}}
+		Commands: []string{
+			"sysctl --system",
+			"modprobe overlay",
+			"modprobe br_netfilter",
+			"systemctl daemon-reload",
+			"systemctl restart containerd",
+		},
+	})
 
 	if cluster.ImportLocalImages {
 		if cluster.LocalImagesPath == "" {
@@ -145,7 +155,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	cfg := yip.YipConfig{
 		Name: "Kubeadm Kairos Cluster Provider",
 		Stages: map[string][]yip.Stage{
-			"boot.before": stages,
+			stage: stages,
 		},
 	}
 
