@@ -157,8 +157,8 @@ docker:
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
     RUN mkdir -p /opt/kubeadm/scripts
     COPY scripts/* /opt/kubeadm/scripts/
-    IF [ !  $FIPS_ENABLED ]
-    RUN bash /opt/kubeadm/scripts/kube-images-load.sh ${KUBEADM_VERSION}
+    IF ! "$FIPS_ENABLED"
+        RUN bash /opt/kubeadm/scripts/kube-images-load.sh ${KUBEADM_VERSION}
     END
 
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
