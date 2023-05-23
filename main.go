@@ -177,7 +177,7 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 			Name: "Run Post Kubeadm Init",
 			If:   "[ ! -f /opt/post-kubeadm.init ]",
 			Commands: []string{
-				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-post-init.sh"), cluster.ControlPlaneHost),
+				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-post-init.sh")),
 				"touch /opt/post-kubeadm.init",
 			},
 		},
@@ -241,6 +241,7 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 		AdvertiseAddress: "0.0.0.0",
 	}
 	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
