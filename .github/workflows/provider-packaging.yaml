@@ -34,3 +34,19 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }} 
       - run: earthly --ci --push +provider-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io
+  build-provider-fips-package:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker-practice/actions-setup-docker@master
+      - uses: earthly/actions-setup@v1
+        with:
+          version: "v0.6.30"
+      - uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: earthly --ci --push +provider-fips-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io --FIPS_ENABLED=true

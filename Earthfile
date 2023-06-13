@@ -74,6 +74,16 @@ build-provider-package:
     COPY scripts/ /opt/kubeadm/scripts/
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:latest
     SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}
+
+build-provider-fips-package:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
+    FROM scratch
+    COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
+    COPY scripts/ /opt/kubeadm/scripts/
+    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm-fips:latest
+    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm-fips:${VERSION}
+
 lint:
     FROM golang:$GOLANG_VERSION
     RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
@@ -205,6 +215,10 @@ docker-all-platforms:
 provider-package-all-platforms:
      BUILD --platform=linux/amd64 +build-provider-package
      BUILD --platform=linux/arm64 +build-provider-package
+
+provider-fips-package-all-platforms:
+     BUILD --platform=linux/amd64 +build-provider-fips-package
+     BUILD --platform=linux/arm64 +build-provider-fips-package
 
 cosign-all-platforms:
      BUILD --platform=linux/amd64 +cosign
