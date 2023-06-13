@@ -237,9 +237,11 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 		},
 	}
 	initCfg.CertificateKey = certificateKey
-	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
-		AdvertiseAddress: "0.0.0.0",
+
+	if initCfg.LocalAPIEndpoint.AdvertiseAddress == "" {
+		initCfg.LocalAPIEndpoint.AdvertiseAddress = "0.0.0.0"
 	}
+
 	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
 	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
 
@@ -265,9 +267,10 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	if cluster.Role == clusterplugin.RoleControlPlane {
 		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
 			CertificateKey: getCertificateKey(cluster.ClusterToken),
-			LocalAPIEndpoint: kubeadmapiv3.APIEndpoint{
-				AdvertiseAddress: "0.0.0.0",
-			},
+		}
+
+		if joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress == "" {
+			joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress = "0.0.0.0"
 		}
 	}
 
