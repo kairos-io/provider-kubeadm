@@ -98,7 +98,8 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 				"systemctl daemon-reload",
 				"systemctl restart containerd",
 			},
-		}}
+		},
+	}
 
 	if cluster.ImportLocalImages {
 		if cluster.LocalImagesPath == "" {
@@ -207,7 +208,7 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 			Name: "Kubeadm Join",
 			If:   "[ ! -f /opt/kubeadm.join ]",
 			Commands: []string{
-				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-join.sh")),
+				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role),
 				"touch /opt/kubeadm.join",
 			},
 		},
