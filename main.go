@@ -187,8 +187,8 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 			Commands: []string{
 				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
 			},
-		},
 	}
+		},
 }
 
 func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {

@@ -10,6 +10,10 @@ set -x
 NODE_ROLE=$1
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
+get_current_upgrading_node_name() {
+  kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
+}
+
 run_upgrade() {
     echo "running upgrade process on $NODE_ROLE"
 
@@ -85,9 +89,4 @@ run_upgrade() {
         fi
     done
 }
-
-get_current_upgrading_node_name() {
-  kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
-}
-
 run_upgrade
