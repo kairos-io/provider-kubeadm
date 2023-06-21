@@ -31,7 +31,7 @@ go-deps:
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
-    RUN apt-get update && apt-get install -y upx
+    RUN apt-get update
     SAVE ARTIFACT go.mod AS LOCAL go.mod
     SAVE ARTIFACT go.sum AS LOCAL go.sum
 
@@ -48,7 +48,7 @@ BUILD_GOLANG:
         ENV GOEXPERIMENT=boringcrypto
     END
 
-    RUN go build -ldflags "-s -w" -o ${BIN} ./${SRC} && upx ${BIN}
+    RUN go build -ldflags "-s -w" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
