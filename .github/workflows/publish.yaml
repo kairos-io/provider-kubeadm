@@ -52,6 +52,9 @@ jobs:
           - 1.23.12
           - 1.24.6
           - 1.25.2
+          - 1.24.13
+          - 1.25.9
+          - 1.26.4
     env:
       REGISTRY: quay.io
       REGISTRY_USER: ${{ secrets.QUAY_USERNAME }}
