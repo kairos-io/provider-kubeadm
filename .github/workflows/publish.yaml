@@ -13,9 +13,9 @@ jobs:
     strategy:
       matrix:
         base-image:
-          - quay.io/kairos/core-opensuse-leap:v2.1.3
-          - quay.io/kairos/core-ubuntu-20-lts:v2.1.3
-          - quay.io/kairos/core-ubuntu-22-lts:v2.1.3
+          - quay.io/kairos/core-opensuse-leap:v2.3.0
+          - quay.io/kairos/core-ubuntu-20-lts:v2.3.0
+          - quay.io/kairos/core-ubuntu-22-lts:v2.3.0
         kubeadm-version:
           - 1.22.15
           - 1.23.12
@@ -44,9 +44,9 @@ jobs:
     strategy:
       matrix:
         base-image:
-          - quay.io/kairos/core-opensuse-leap:v2.1.3
-          - quay.io/kairos/core-ubuntu-20-lts:v2.1.3
-          - quay.io/kairos/core-ubuntu-22-lts:v2.1.3
+          - quay.io/kairos/core-opensuse-leap:v2.3.0
+          - quay.io/kairos/core-ubuntu-20-lts:v2.3.0
+          - quay.io/kairos/core-ubuntu-22-lts:v2.3.0
         kubeadm-version:
           - 1.22.15
           - 1.23.12
