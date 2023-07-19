@@ -41,14 +41,17 @@ BUILD_GOLANG:
     COPY . ./
     ARG BIN
     ARG SRC
+    ARG LDFLAGS=-s -w
 
     ENV CGO_ENABLED=0
 
     IF $FIPS_ENABLED
+        ARG LDFLAGS=-s -w -linkmode=external -extldflags=-static
+        ENV CGO_ENABLED=1
         ENV GOEXPERIMENT=boringcrypto
     END
 
-    RUN go build -ldflags "-s -w" -o ${BIN} ./${SRC}
+    RUN go build -ldflags="${LDFLAGS}" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
