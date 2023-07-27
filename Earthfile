@@ -27,7 +27,7 @@ build-cosign:
     SAVE ARTIFACT /ko-app/cosign cosign
 
 go-deps:
-    FROM golang:$GOLANG_VERSION
+    FROM gcr.io/spectro-images-public/golang:1.19-debian
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
