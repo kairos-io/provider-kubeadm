@@ -32,13 +32,13 @@ jobs:
           version: "v0.6.30"
       - uses: docker/login-action@v1
         with:
-          registry: ghcr.io
+          registry: gcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }} 
-      - run: earthly --ci --output  +provider-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io
+      - run: earthly --ci --output  +provider-package-all-platforms --IMAGE_REPOSITORY=gcr.io/kairos-io
       - name: Push to testing
         run: |
-          docker tag ghcr.io/kairos-io/provider-kubeadm:latest ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:8h
+          docker tag gcr.io/kairos-io/provider-kubeadm:latest ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:8h
           docker push ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:8h
   build:
     runs-on: ubuntu-latest
