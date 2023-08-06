@@ -67,7 +67,7 @@ run_upgrade() {
             fi
             if [ "$master_api_version" = "$old_version" ]
             then
-                upgrade_command="kubeadm upgrade apply -y $current_version"
+                upgrade_command="kubeadm upgrade apply --config /opt/kubeadm/kubeadm.yaml -y $current_version"
             fi
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
