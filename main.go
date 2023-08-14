@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net"
 	"path/filepath"
 	"strings"
 
@@ -140,7 +139,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	if cluster.Role == clusterplugin.RoleInit {
 		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		stages = append(stages, getJoinYipStages(cluster, kubeadmConfig.JoinConfiguration)...)
+		stages = append(stages, getJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.JoinConfiguration)...)
 	}
 
 	cfg := yip.YipConfig{
@@ -155,6 +154,25 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) []yip.Stage {
 	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg)
+
+	initStage := yip.Stage{
+		Name: "Run Kubeadm Init",
+		If:   "[ ! -f /opt/kubeadm.init ]",
+	}
+
+	if IsProxyConfigured(cluster.Env) {
+		proxy := cluster.Env
+		initStage.Commands = []string{
+			fmt.Sprintf("bash %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-init.sh"), true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
+			"touch /opt/kubeadm.init",
+		}
+	} else {
+		initStage.Commands = []string{
+			fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-init.sh")),
+			"touch /opt/kubeadm.init",
+		}
+	}
+
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Init Config File",
@@ -166,14 +184,7 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 				},
 			},
 		},
-		{
-			Name: "Run Kubeadm Init",
-			If:   "[ ! -f /opt/kubeadm.init ]",
-			Commands: []string{
-				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-init.sh")),
-				"touch /opt/kubeadm.init",
-			},
-		},
+		initStage,
 		{
 			Name: "Run Post Kubeadm Init",
 			If:   "[ ! -f /opt/post-kubeadm.init ]",
@@ -191,8 +202,27 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 	}
 }
 
-func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {
+func getJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {
 	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
+
+	joinStage := yip.Stage{
+		Name: "Kubeadm Join",
+		If:   "[ ! -f /opt/kubeadm.join ]",
+	}
+
+	if IsProxyConfigured(cluster.Env) {
+		proxy := cluster.Env
+		joinStage.Commands = []string{
+			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
+			"touch /opt/kubeadm.join",
+		}
+	} else {
+		joinStage.Commands = []string{
+			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role),
+			"touch /opt/kubeadm.join",
+		}
+	}
+
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Join Config File",
@@ -204,14 +234,7 @@ func getJoinYipStages(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinCo
 				},
 			},
 		},
-		{
-			Name: "Kubeadm Join",
-			If:   "[ ! -f /opt/kubeadm.join ]",
-			Commands: []string{
-				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role),
-				"touch /opt/kubeadm.join",
-			},
-		},
+		joinStage,
 		{
 			Name: "Run Kubeadm Upgrade",
 			Commands: []string{
@@ -367,33 +390,31 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 	return strings.Join(proxy, "\n")
 }
 
+func IsProxyConfigured(proxyMap map[string]string) bool {
+	return len(proxyMap["HTTP_PROXY"]) > 0 || len(proxyMap["HTTPS_PROXY"]) > 0 || len(proxyMap["NO_PROXY"]) > 0
+}
+
 func getDefaultNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 	var noProxy string
 
-	cluster_cidr := clusterCfg.Networking.PodSubnet
-	service_cidr := clusterCfg.Networking.ServiceSubnet
+	clusterCidr := clusterCfg.Networking.PodSubnet
+	serviceCidr := clusterCfg.Networking.ServiceSubnet
 
-	if len(cluster_cidr) > 0 {
-		noProxy = noProxy + "," + cluster_cidr
+	if len(clusterCidr) > 0 {
+		noProxy = clusterCidr
 	}
-	if len(service_cidr) > 0 {
-		noProxy = noProxy + "," + service_cidr
+	if len(serviceCidr) > 0 {
+		noProxy = noProxy + "," + serviceCidr
 	}
 
-	noProxy = noProxy + "," + getNodeCIDR() + "," + K8sNoProxy
-	return noProxy
+	return noProxy + "," + K8sNoProxy
 }
 
-func getNodeCIDR() string {
-	addrs, _ := net.InterfaceAddrs()
-	var result string
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				result = addr.String()
-				break
-			}
-		}
+func getNoProxyConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
+	defaultNoProxy := getDefaultNoProxy(clusterCfg)
+	userNoProxy := proxyMap["NO_PROXY"]
+	if len(userNoProxy) > 0 {
+		return defaultNoProxy + "," + userNoProxy
 	}
-	return result
+	return defaultNoProxy
 }
