@@ -173,6 +173,21 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 		}
 	}
 
+	upgradeStage := yip.Stage{
+		Name: "Run Kubeadm Upgrade",
+	}
+
+	if IsProxyConfigured(cluster.Env) {
+		proxy := cluster.Env
+		upgradeStage.Commands = []string{
+			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
+		}
+	} else {
+		upgradeStage.Commands = []string{
+			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
+		}
+	}
+
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Init Config File",
@@ -193,12 +208,7 @@ func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 				"touch /opt/post-kubeadm.init",
 			},
 		},
-		{
-			Name: "Run Kubeadm Upgrade",
-			Commands: []string{
-				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
-			},
-		},
+		upgradeStage,
 	}
 }
 
@@ -223,6 +233,21 @@ func getJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.Clu
 		}
 	}
 
+	upgradeStage := yip.Stage{
+		Name: "Run Kubeadm Upgrade",
+	}
+
+	if IsProxyConfigured(cluster.Env) {
+		proxy := cluster.Env
+		upgradeStage.Commands = []string{
+			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
+		}
+	} else {
+		upgradeStage.Commands = []string{
+			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
+		}
+	}
+
 	return []yip.Stage{
 		{
 			Name: "Generate Kubeadm Join Config File",
@@ -235,12 +260,7 @@ func getJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.Clu
 			},
 		},
 		joinStage,
-		{
-			Name: "Run Kubeadm Upgrade",
-			Commands: []string{
-				fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
-			},
-		},
+		upgradeStage,
 	}
 }
 
