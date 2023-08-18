@@ -4,14 +4,42 @@ exec   > >(tee -ia /var/log/kube-upgrade.log)
 exec  2> >(tee -ia /var/log/kube-upgrade.log >& 2)
 exec 19>> /var/log/kube-upgrade.log
 
-export BASH_XTRACEFD="19"
 set -x
 
 NODE_ROLE=$1
+
+PROXY_CONFIGURED=$2
+proxy_http=$3
+proxy_https=$4
+proxy_no=$5
+
+if [ -n "$proxy_no" ]; then
+  export NO_PROXY=$proxy_no
+  export no_proxy=$proxy_no
+fi
+
+if [ -n "$proxy_http" ]; then
+  export HTTP_PROXY=$proxy_http
+  export http_proxy=$proxy_http
+fi
+
+if [ -n "$proxy_https" ]; then
+  export https_proxy=$proxy_https
+  export HTTPS_PROXY=$proxy_https
+fi
+
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
 get_current_upgrading_node_name() {
   kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
+}
+
+delete_lock_config_map(){
+  # Delete the configmap lock once the upgrade completes
+  if [ "$NODE_ROLE" != "worker" ]
+  then
+    kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system
+  fi
 }
 
 run_upgrade() {
@@ -55,6 +83,11 @@ run_upgrade() {
         # worker node will always run 'upgrade node'
         # control plane will also run `upgrade node' except one node will run 'upgrade apply' based on who acquires lock
         upgrade_command="kubeadm upgrade node"
+        if [ "$PROXY_CONFIGURED" = true ]; then
+          up=("kubeadm upgrade node")
+          upgrade_command="${up[*]}"
+        fi
+
         if [ "$NODE_ROLE" != "worker" ]
         then
             # The current api version is stored in kubeadm-config configmap
@@ -65,27 +98,44 @@ run_upgrade() {
               sleep 60
               continue
             fi
+
             if [ "$master_api_version" = "$old_version" ]
             then
-                upgrade_command="kubeadm upgrade apply --config /opt/kubeadm/kubeadm.yaml -y $current_version"
+                upgrade_command="kubeadm upgrade apply -y $current_version"
+                if [ "$PROXY_CONFIGURED" = true ]; then
+                  up=("kubeadm upgrade apply -y ${current_version}")
+                  upgrade_command="${up[*]}"
+                fi
             fi
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
-        if $upgrade_command
-        then
-            # Update current client version in the version file
-            echo "$current_version" > /opt/sentinel_kubeadmversion
-            old_version=$current_version
-            echo "upgrade success"
 
-            # Delete the configmap lock once the upgrade completes
-            if [ "$NODE_ROLE" != "worker" ]
-            then
-              kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system
-            fi
+        if [ "$PROXY_CONFIGURED" = true ]; then
+          if sudo -E bash -c "$upgrade_command"
+          then
+              # Update current client version in the version file
+              echo "$current_version" > /opt/sentinel_kubeadmversion
+              old_version=$current_version
+
+              delete_lock_config_map
+              echo "upgrade success"
+          else
+              echo "upgrade failed, retrying in 60 seconds"
+              sleep 60
+          fi
         else
-            echo "upgrade failed, retrying in 60 seconds"
-            sleep 60
+          if $upgrade_command
+          then
+              # Update current client version in the version file
+              echo "$current_version" > /opt/sentinel_kubeadmversion
+              old_version=$current_version
+
+              delete_lock_config_map
+              echo "upgrade success"
+          else
+              echo "upgrade failed, retrying in 60 seconds"
+              sleep 60
+          fi
         fi
     done
 }
