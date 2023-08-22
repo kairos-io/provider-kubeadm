@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kyaml "sigs.k8s.io/yaml"
@@ -16,6 +17,8 @@ import (
 	"k8s.io/cli-runtime/pkg/printers"
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -38,15 +41,17 @@ var (
 
 func init() {
 	_ = kubeadmapiv3.AddToScheme(scheme)
+	_ = kubeletv1beta1.AddToScheme(scheme)
 }
 
 var configurationPath = "/opt/kubeadm"
 var helperScriptPath = "/opt/kubeadm/scripts"
 
 type KubeadmConfig struct {
-	ClusterConfiguration kubeadmapiv3.ClusterConfiguration `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
-	InitConfiguration    kubeadmapiv3.InitConfiguration    `json:"initConfiguration,omitempty" yaml:"initConfiguration,omitempty"`
-	JoinConfiguration    kubeadmapiv3.JoinConfiguration    `json:"joinConfiguration,omitempty" yaml:"joinConfiguration,omitempty"`
+	ClusterConfiguration kubeadmapiv3.ClusterConfiguration   `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
+	InitConfiguration    kubeadmapiv3.InitConfiguration      `json:"initConfiguration,omitempty" yaml:"initConfiguration,omitempty"`
+	JoinConfiguration    kubeadmapiv3.JoinConfiguration      `json:"joinConfiguration,omitempty" yaml:"joinConfiguration,omitempty"`
+	KubeletConfiguration kubeletv1beta1.KubeletConfiguration `json:"kubeletConfiguration,omitempty" yaml:"kubeletConfiguration,omitempty"`
 }
 
 func main() {
@@ -137,7 +142,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	stages = append(stages, preStage...)
 
 	if cluster.Role == clusterplugin.RoleInit {
-		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration)...)
+		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
 		stages = append(stages, getJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.JoinConfiguration)...)
 	}
@@ -152,8 +157,8 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	return cfg
 }
 
-func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) []yip.Stage {
-	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg)
+func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
+	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg, kubeletCfg)
 
 	initStage := yip.Stage{
 		Name: "Run Kubeadm Init",
@@ -264,7 +269,7 @@ func getJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.Clu
 	}
 }
 
-func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
 	certificateKey := getCertificateKey(cluster.ClusterToken)
 
 	substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(cluster.ClusterToken)
@@ -287,12 +292,20 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
 	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
 
+	kubeletCfg.ShutdownGracePeriod = metav1.Duration{
+		Duration: 120 * time.Second,
+	}
+	kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
+		Duration: 60 * time.Second,
+	}
+
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
 
 	_ = initPrintr.PrintObj(&clusterCfg, out)
 	_ = initPrintr.PrintObj(&initCfg, out)
+	_ = initPrintr.PrintObj(&kubeletCfg, out)
 
 	return out.String()
 }
