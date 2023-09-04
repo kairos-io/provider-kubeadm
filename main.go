@@ -1,58 +1,17 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"path/filepath"
-	"strings"
-	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+	"github.com/kairos-io/kairos/provider-kubeadm/stages"
+	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	kyaml "sigs.k8s.io/yaml"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/cli-runtime/pkg/printers"
-	bootstraputil "k8s.io/cluster-bootstrap/token/util"
-	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
-
-	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	yip "github.com/mudler/yip/pkg/schema"
 	"github.com/sirupsen/logrus"
-	bootstraptokenv1 "k8s.io/kubernetes/cmd/kubeadm/app/apis/bootstraptoken/v1"
 )
-
-const (
-	kubeletEnvConfigPath = "/etc/default"
-	envPrefix            = "Environment="
-	systemdDir           = "/etc/systemd/system/containerd.service.d"
-	kubeletServiceName   = "kubelet"
-	containerdEnv        = "http-proxy.conf"
-	K8sNoProxy           = ".svc,.svc.cluster,.svc.cluster.local"
-)
-
-var (
-	scheme = runtime.NewScheme()
-)
-
-func init() {
-	_ = kubeadmapiv3.AddToScheme(scheme)
-	_ = kubeletv1beta1.AddToScheme(scheme)
-}
-
-var configurationPath = "/opt/kubeadm"
-var helperScriptPath = "/opt/kubeadm/scripts"
-
-type KubeadmConfig struct {
-	ClusterConfiguration kubeadmapiv3.ClusterConfiguration   `json:"clusterConfiguration,omitempty" yaml:"clusterConfiguration,omitempty"`
-	InitConfiguration    kubeadmapiv3.InitConfiguration      `json:"initConfiguration,omitempty" yaml:"initConfiguration,omitempty"`
-	JoinConfiguration    kubeadmapiv3.JoinConfiguration      `json:"joinConfiguration,omitempty" yaml:"joinConfiguration,omitempty"`
-	KubeletConfiguration kubeletv1beta1.KubeletConfiguration `json:"kubeletConfiguration,omitempty" yaml:"kubeletConfiguration,omitempty"`
-}
 
 func main() {
 	plugin := clusterplugin.ClusterPlugin{
@@ -65,9 +24,8 @@ func main() {
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
-	var stages []yip.Stage
-	var kubeadmConfig KubeadmConfig
-	var importStage yip.Stage
+	var finalStages []yip.Stage
+	var kubeadmConfig domain.KubeadmConfig
 
 	if cluster.Options != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
@@ -75,379 +33,32 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	}
 
 	preStage := []yip.Stage{
-		{
-			Name: "Set proxy env",
-			Files: []yip.File{
-				{
-					Path:        filepath.Join(kubeletEnvConfigPath, kubeletServiceName),
-					Permissions: 0400,
-					Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
-				},
-				{
-					Path:        filepath.Join(systemdDir, containerdEnv),
-					Permissions: 0400,
-					Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
-				},
-			},
-		},
-		{
-			Name: "Run Pre Kubeadm Commands",
-			Systemctl: yip.Systemctl{
-				Enable: []string{"kubelet"},
-			},
-			Commands: []string{
-				"sysctl --system",
-				"modprobe overlay",
-				"modprobe br_netfilter",
-				"systemctl daemon-reload",
-				"systemctl restart containerd",
-			},
-		},
+		stages.GetPreKubeadmCommandStages(),
+		stages.GetPreKubeadmProxyStage(kubeadmConfig, cluster),
+		stages.GetPreKubeadmImportCoreK8sImageStage(),
+		stages.GetPreKubeadmStoreKubeadmVersionStage(),
 	}
 
 	if cluster.ImportLocalImages {
-		if cluster.LocalImagesPath == "" {
-			cluster.LocalImagesPath = "/opt/content/images"
-		}
-
-		importStage = yip.Stage{
-			Commands: []string{
-				fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-				fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(helperScriptPath, "import.sh"), cluster.LocalImagesPath),
-			},
-			If: fmt.Sprintf("[ -d %s ]", cluster.LocalImagesPath),
-		}
-		preStage = append(preStage, importStage)
+		preStage = append(preStage, stages.GetPreKubeadmImportLocalImageStage(cluster))
 	}
 
-	// import k8s images
-	preStage = append(preStage, yip.Stage{
-		Name: "Run Load Kube Images",
-		Commands: []string{
-			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s /opt/kubeadm/kube-images > /var/log/import-kube-images.log", filepath.Join(helperScriptPath, "import.sh")),
-		},
-	})
+	cluster.ClusterToken = utils.TransformToken(cluster.ClusterToken)
 
-	preStage = append(preStage, yip.Stage{
-		If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
-		Name: "Create kubeadm sentinel version file",
-		Commands: []string{
-			"kubeadm version -o short > /opt/sentinel_kubeadmversion",
-		},
-	})
-
-	cluster.ClusterToken = transformToken(cluster.ClusterToken)
-
-	stages = append(stages, preStage...)
+	finalStages = append(finalStages, preStage...)
 
 	if cluster.Role == clusterplugin.RoleInit {
-		stages = append(stages, getInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		stages = append(stages, getJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.JoinConfiguration)...)
+		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
 	}
 
 	cfg := yip.YipConfig{
 		Name: "Kubeadm Kairos Cluster Provider",
 		Stages: map[string][]yip.Stage{
-			"boot.before": stages,
+			"boot.before": finalStages,
 		},
 	}
 
 	return cfg
-}
-
-func getInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg, kubeletCfg)
-
-	initStage := yip.Stage{
-		Name: "Run Kubeadm Init",
-		If:   "[ ! -f /opt/kubeadm.init ]",
-	}
-
-	if IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
-		initStage.Commands = []string{
-			fmt.Sprintf("bash %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-init.sh"), true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
-			"touch /opt/kubeadm.init",
-		}
-	} else {
-		initStage.Commands = []string{
-			fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-init.sh")),
-			"touch /opt/kubeadm.init",
-		}
-	}
-
-	upgradeStage := yip.Stage{
-		Name: "Run Kubeadm Upgrade",
-	}
-
-	if IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
-		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
-		}
-	} else {
-		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
-		}
-	}
-
-	return []yip.Stage{
-		{
-			Name: "Generate Kubeadm Init Config File",
-			Files: []yip.File{
-				{
-					Path:        filepath.Join(configurationPath, "kubeadm.yaml"),
-					Permissions: 0640,
-					Content:     kubeadmCfg,
-				},
-			},
-		},
-		initStage,
-		{
-			Name: "Run Post Kubeadm Init",
-			If:   "[ ! -f /opt/post-kubeadm.init ]",
-			Commands: []string{
-				fmt.Sprintf("bash %s", filepath.Join(helperScriptPath, "kube-post-init.sh")),
-				"touch /opt/post-kubeadm.init",
-			},
-		},
-		upgradeStage,
-	}
-}
-
-func getJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) []yip.Stage {
-	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
-
-	joinStage := yip.Stage{
-		Name: "Kubeadm Join",
-		If:   "[ ! -f /opt/kubeadm.join ]",
-	}
-
-	if IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
-		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
-			"touch /opt/kubeadm.join",
-		}
-	} else {
-		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role),
-			"touch /opt/kubeadm.join",
-		}
-	}
-
-	upgradeStage := yip.Stage{
-		Name: "Run Kubeadm Upgrade",
-	}
-
-	if IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
-		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], getNoProxyConfig(clusterCfg, cluster.Env)),
-		}
-	} else {
-		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
-		}
-	}
-
-	return []yip.Stage{
-		{
-			Name: "Generate Kubeadm Join Config File",
-			Files: []yip.File{
-				{
-					Path:        filepath.Join(configurationPath, "kubeadm.yaml"),
-					Permissions: 0640,
-					Content:     kubeadmCfg,
-				},
-			},
-		},
-		joinStage,
-		upgradeStage,
-	}
-}
-
-func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
-	certificateKey := getCertificateKey(cluster.ClusterToken)
-
-	substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(cluster.ClusterToken)
-
-	initCfg.BootstrapTokens = []bootstraptokenv1.BootstrapToken{
-		{
-			Token: &bootstraptokenv1.BootstrapTokenString{
-				ID:     substrs[1],
-				Secret: substrs[2],
-			},
-			TTL: &metav1.Duration{
-				Duration: 0,
-			},
-		},
-	}
-	initCfg.CertificateKey = certificateKey
-	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
-		AdvertiseAddress: "0.0.0.0",
-	}
-	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
-	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
-
-	kubeletCfg.ShutdownGracePeriod = metav1.Duration{
-		Duration: 120 * time.Second,
-	}
-	kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
-		Duration: 60 * time.Second,
-	}
-
-	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
-
-	out := bytes.NewBuffer([]byte{})
-
-	_ = initPrintr.PrintObj(&clusterCfg, out)
-	_ = initPrintr.PrintObj(&initCfg, out)
-	_ = initPrintr.PrintObj(&kubeletCfg, out)
-
-	return out.String()
-}
-
-func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) string {
-	if joinCfg.Discovery.BootstrapToken == nil {
-		joinCfg.Discovery.BootstrapToken = &kubeadmapiv3.BootstrapTokenDiscovery{
-			Token:                    cluster.ClusterToken,
-			APIServerEndpoint:        fmt.Sprintf("%s:6443", cluster.ControlPlaneHost),
-			UnsafeSkipCAVerification: true,
-		}
-	}
-
-	if cluster.Role == clusterplugin.RoleControlPlane {
-		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
-			CertificateKey: getCertificateKey(cluster.ClusterToken),
-			LocalAPIEndpoint: kubeadmapiv3.APIEndpoint{
-				AdvertiseAddress: "0.0.0.0",
-			},
-		}
-	}
-
-	joinPrinter := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
-
-	out := bytes.NewBuffer([]byte{})
-
-	_ = joinPrinter.PrintObj(&joinCfg, out)
-
-	return out.String()
-}
-
-func getCertificateKey(token string) string {
-	hasher := sha256.New()
-	hasher.Write([]byte(token))
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func transformToken(clusterToken string) string {
-	hash := sha256.New()
-	hash.Write([]byte(clusterToken))
-	hashString := hex.EncodeToString(hash.Sum(nil))
-	return fmt.Sprintf("%s.%s", hashString[len(hashString)-6:], hashString[:16])
-}
-
-func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
-	var proxy []string
-	var noProxy string
-	var isProxyConfigured bool
-
-	httpProxy := proxyMap["HTTP_PROXY"]
-	httpsProxy := proxyMap["HTTP_PROXY"]
-	userNoProxy := proxyMap["NO_PROXY"]
-	defaultNoProxy := getDefaultNoProxy(clusterCfg)
-
-	if len(httpProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
-		isProxyConfigured = true
-	}
-
-	if len(httpsProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf("HTTPS_PROXY=%s", httpsProxy))
-		isProxyConfigured = true
-	}
-
-	if isProxyConfigured {
-		noProxy = defaultNoProxy
-	}
-
-	if len(userNoProxy) > 0 {
-		noProxy = noProxy + "," + userNoProxy
-	}
-
-	if len(noProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf("NO_PROXY=%s", noProxy))
-	}
-
-	return strings.Join(proxy, "\n")
-}
-
-func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
-	var proxy []string
-	var isProxyConfigured bool
-	var noProxy string
-
-	httpProxy := proxyMap["HTTP_PROXY"]
-	httpsProxy := proxyMap["HTTPS_PROXY"]
-	userNoProxy := proxyMap["NO_PROXY"]
-	defaultNoProxy := getDefaultNoProxy(clusterCfg)
-
-	if len(httpProxy) > 0 || len(httpsProxy) > 0 || len(userNoProxy) > 0 {
-		proxy = append(proxy, "[Service]")
-		isProxyConfigured = true
-	}
-
-	if len(httpProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTP_PROXY=%s"+"\"", httpProxy))
-	}
-
-	if len(httpsProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTPS_PROXY=%s"+"\"", httpsProxy))
-	}
-
-	if isProxyConfigured {
-		noProxy = defaultNoProxy
-	}
-
-	if len(userNoProxy) > 0 {
-		noProxy = noProxy + "," + userNoProxy
-	}
-
-	if len(noProxy) > 0 {
-		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
-	}
-
-	return strings.Join(proxy, "\n")
-}
-
-func IsProxyConfigured(proxyMap map[string]string) bool {
-	return len(proxyMap["HTTP_PROXY"]) > 0 || len(proxyMap["HTTPS_PROXY"]) > 0 || len(proxyMap["NO_PROXY"]) > 0
-}
-
-func getDefaultNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
-	var noProxy string
-
-	clusterCidr := clusterCfg.Networking.PodSubnet
-	serviceCidr := clusterCfg.Networking.ServiceSubnet
-
-	if len(clusterCidr) > 0 {
-		noProxy = clusterCidr
-	}
-	if len(serviceCidr) > 0 {
-		noProxy = noProxy + "," + serviceCidr
-	}
-
-	return noProxy + "," + K8sNoProxy
-}
-
-func getNoProxyConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
-	defaultNoProxy := getDefaultNoProxy(clusterCfg)
-	userNoProxy := proxyMap["NO_PROXY"]
-	if len(userNoProxy) > 0 {
-		return defaultNoProxy + "," + userNoProxy
-	}
-	return defaultNoProxy
 }
