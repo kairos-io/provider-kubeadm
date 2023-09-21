@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
@@ -32,12 +31,11 @@ const (
 )
 
 func GetInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg, kubeletCfg)
-
-	mutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
 	return []yip.Stage{
-		getKubeadmInitConfigStage(kubeadmCfg),
+		getKubeadmInitConfigStage(getInitNodeConfiguration(cluster, initCfg, clusterCfg, kubeletCfg)),
 		getKubeadmInitStage(cluster, clusterCfg),
 		getKubeadmPostInitStage(),
 		getKubeadmInitUpgradeStage(cluster, clusterCfg),
@@ -182,18 +180,6 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
 	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
 
-	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriod = metav1.Duration{
-			Duration: 120 * time.Second,
-		}
-	}
-
-	if kubeletCfg.ShutdownGracePeriodCriticalPods.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
-			Duration: 60 * time.Second,
-		}
-	}
-
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
@@ -206,9 +192,6 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 }
 
 func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, cluster clusterplugin.Cluster) string {
-	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
-	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
-
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
@@ -218,30 +201,10 @@ func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, clust
 }
 
 func getUpdatedKubeletConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
-	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriod = metav1.Duration{
-			Duration: 120 * time.Second,
-		}
-	}
-
-	if kubeletCfg.ShutdownGracePeriodCriticalPods.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
-			Duration: 60 * time.Second,
-		}
-	}
-
-	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
-
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
 	_ = initPrintr.PrintObj(&kubeletCfg, out)
 
 	return out.String()
-}
-
-func mutateClusterConfigDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration) {
-	if clusterCfg.ImageRepository == "" {
-		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
-	}
 }
