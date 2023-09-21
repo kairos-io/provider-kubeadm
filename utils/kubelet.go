@@ -38,12 +38,12 @@ var k8sVersionToPauseImage = map[string]string{
 
 // WriteKubeletConfigToDisk writes the kubelet config object down to a file
 func WriteKubeletConfigToDisk(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration, kubeletConfigPath string) {
-	mutateDefaults(clusterCfg, kubeletCfg)
+	MutateKubeletDefaults(clusterCfg, kubeletCfg)
 	data, _ := kyaml.Marshal(kubeletCfg)
 	writeConfigBytesToDisk(data, kubeletConfigPath)
 }
 
-func mutateDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
+func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
 	kubeletCfg.APIVersion = "kubelet.config.k8s.io/v1beta1"
 	kubeletCfg.Kind = "KubeletConfiguration"
 

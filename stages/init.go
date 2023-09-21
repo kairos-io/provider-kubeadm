@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
-
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -148,8 +146,6 @@ func getKubeadmInitReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg ku
 	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &initCfg.NodeRegistration, string(cluster.Role))
 	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
 
-	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join("/var/lib/kubelet", constants.KubeletConfigurationFileName))
-
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		reconfigureStage.Commands = []string{
@@ -234,7 +230,7 @@ func getUpdatedKubeletConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, kubel
 		}
 	}
 
-	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join(configurationPath, "kubelet-config.yaml"))
+	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 

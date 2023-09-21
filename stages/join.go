@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
-
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
@@ -143,8 +141,6 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg ku
 
 	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &joinCfg.NodeRegistration, string(cluster.Role))
 	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
-
-	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join("/var/lib/kubelet", constants.KubeletConfigurationFileName))
 
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
