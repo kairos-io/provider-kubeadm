@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
+
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -34,13 +36,15 @@ const (
 func GetInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
 	kubeadmCfg := getInitNodeConfiguration(cluster, initCfg, clusterCfg, kubeletCfg)
 
+	mutateClusterConfigDefaults(&clusterCfg)
+
 	return []yip.Stage{
 		getKubeadmInitConfigStage(kubeadmCfg),
 		getKubeadmInitStage(cluster, clusterCfg),
 		getKubeadmPostInitStage(),
 		getKubeadmInitUpgradeStage(cluster, clusterCfg),
 		getKubeadmInitCreateClusterConfigStage(cluster, clusterCfg),
-		getKubeadmInitCreateKubeletConfigStage(cluster, kubeletCfg),
+		getKubeadmInitCreateKubeletConfigStage(cluster, clusterCfg, kubeletCfg),
 		getKubeadmInitReconfigureStage(cluster, kubeletCfg, clusterCfg, initCfg),
 	}
 }
@@ -122,7 +126,7 @@ func getKubeadmInitCreateClusterConfigStage(cluster clusterplugin.Cluster, clust
 	}
 }
 
-func getKubeadmInitCreateKubeletConfigStage(cluster clusterplugin.Cluster, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
+func getKubeadmInitCreateKubeletConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Kubelet Config File",
 		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
@@ -130,7 +134,7 @@ func getKubeadmInitCreateKubeletConfigStage(cluster clusterplugin.Cluster, kubel
 			{
 				Path:        filepath.Join(configurationPath, "kubelet-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedKubeletConfig(kubeletCfg),
+				Content:     getUpdatedKubeletConfig(clusterCfg, kubeletCfg),
 			},
 		},
 	}
@@ -144,7 +148,7 @@ func getKubeadmInitReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg ku
 	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &initCfg.NodeRegistration, string(cluster.Role))
 	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
 
-	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg)
+	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join("/var/lib/kubelet", constants.KubeletConfigurationFileName))
 
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
@@ -217,7 +221,7 @@ func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, clust
 	return out.String()
 }
 
-func getUpdatedKubeletConfig(kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
+func getUpdatedKubeletConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
 	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
 		kubeletCfg.ShutdownGracePeriod = metav1.Duration{
 			Duration: 120 * time.Second,
@@ -230,10 +234,18 @@ func getUpdatedKubeletConfig(kubeletCfg kubeletv1beta1.KubeletConfiguration) str
 		}
 	}
 
+	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join(configurationPath, "kubelet-config.yaml"))
+
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
 	_ = initPrintr.PrintObj(&kubeletCfg, out)
 
 	return out.String()
+}
+
+func mutateClusterConfigDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration) {
+	if clusterCfg.ImageRepository == "" {
+		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
+	}
 }

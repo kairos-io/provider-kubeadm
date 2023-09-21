@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
+
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
@@ -16,13 +18,14 @@ import (
 
 func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
 	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
+	mutateClusterConfigDefaults(&clusterCfg)
 
 	return []yip.Stage{
 		getKubeadmJoinConfigStage(kubeadmCfg),
 		getKubeadmJoinStage(cluster, clusterCfg),
 		getKubeadmJoinUpgradeStage(cluster, clusterCfg),
 		getKubeadmJoinCreateClusterConfigStage(cluster, clusterCfg),
-		getKubeadmJoinCreateKubeletConfigStage(cluster, kubeletCfg),
+		getKubeadmJoinCreateKubeletConfigStage(cluster, clusterCfg, kubeletCfg),
 		getKubeadmJoinReconfigureStage(cluster, kubeletCfg, clusterCfg, joinCfg),
 	}
 }
@@ -119,7 +122,7 @@ func getKubeadmJoinCreateClusterConfigStage(cluster clusterplugin.Cluster, clust
 	}
 }
 
-func getKubeadmJoinCreateKubeletConfigStage(cluster clusterplugin.Cluster, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
+func getKubeadmJoinCreateKubeletConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Kubelet Config File",
 		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
@@ -127,7 +130,7 @@ func getKubeadmJoinCreateKubeletConfigStage(cluster clusterplugin.Cluster, kubel
 			{
 				Path:        filepath.Join(configurationPath, "kubelet-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedKubeletConfig(kubeletCfg),
+				Content:     getUpdatedKubeletConfig(clusterCfg, kubeletCfg),
 			},
 		},
 	}
@@ -141,7 +144,7 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg ku
 	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &joinCfg.NodeRegistration, string(cluster.Role))
 	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
 
-	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg)
+	utils.WriteKubeletConfigToDisk(&clusterCfg, &kubeletCfg, filepath.Join("/var/lib/kubelet", constants.KubeletConfigurationFileName))
 
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env

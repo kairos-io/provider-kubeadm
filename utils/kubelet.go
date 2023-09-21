@@ -27,11 +27,20 @@ type kubeletFlagsOpts struct {
 	registerTaintsUsingFlags bool
 }
 
+var k8sVersionToPauseImage = map[string]string{
+	"v1.22.15": "3.5",
+	"v1.23.12": "3.6",
+	"v1.24.6":  "3.7",
+	"v1.25.2":  "3.8",
+	"v1.26.4":  "3.8",
+	"v1.27.2":  "3.9",
+}
+
 // WriteKubeletConfigToDisk writes the kubelet config object down to a file
-func WriteKubeletConfigToDisk(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
+func WriteKubeletConfigToDisk(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration, kubeletConfigPath string) {
 	mutateDefaults(clusterCfg, kubeletCfg)
 	data, _ := kyaml.Marshal(kubeletCfg)
-	writeConfigBytesToDisk(data, "/var/lib/kubelet")
+	writeConfigBytesToDisk(data, kubeletConfigPath)
 }
 
 func mutateDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
@@ -114,8 +123,7 @@ func isServiceActive(name string) (bool, error) {
 }
 
 func writeConfigBytesToDisk(b []byte, kubeletDir string) {
-	configFile := filepath.Join(kubeletDir, constants.KubeletConfigurationFileName)
-	_ = os.WriteFile(configFile, b, 0644)
+	_ = os.WriteFile(kubeletDir, b, 0644)
 }
 
 func RegenerateKubeletKubeadmArgsFile(clusterCfg *kubeadmapiv3.ClusterConfiguration, nodeReg *kubeadmapiv3.NodeRegistrationOptions, nodeRole string) string {
@@ -126,7 +134,7 @@ func RegenerateKubeletKubeadmArgsFile(clusterCfg *kubeadmapiv3.ClusterConfigurat
 
 	flagOpts := kubeletFlagsOpts{
 		nodeRegOpts:              nodeReg,
-		pauseImage:               fmt.Sprintf("%s/%s:%s", clusterCfg.ImageRepository, "pause", constants.PauseVersion),
+		pauseImage:               fmt.Sprintf("%s/%s:%s", clusterCfg.ImageRepository, "pause", k8sVersionToPauseImage[clusterCfg.KubernetesVersion]),
 		registerTaintsUsingFlags: registerTaintsUsingFlags,
 	}
 	stringMap := buildKubeletArgMapCommon(flagOpts)

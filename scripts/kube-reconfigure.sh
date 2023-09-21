@@ -72,7 +72,7 @@ regenerate_apiserver_certs_sans() {
 }
 
 regenerate_kubelet_envs() {
-  echo "$kubelet_envs" > /var/lib/kubelet/kubeadm-flags.env
+  echo "\"$kubelet_envs\"" > /var/lib/kubelet/kubeadm-flags.env
   systemctl restart kubelet
 }
 
