@@ -31,7 +31,7 @@ const (
 )
 
 func GetInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	utils.MutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateClusterConfigDefaults(cluster, &clusterCfg)
 	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
 	return []yip.Stage{
@@ -39,9 +39,9 @@ func GetInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 		getKubeadmInitStage(cluster, clusterCfg),
 		getKubeadmPostInitStage(),
 		getKubeadmInitUpgradeStage(cluster, clusterCfg),
-		getKubeadmInitCreateClusterConfigStage(cluster, clusterCfg),
-		getKubeadmInitCreateKubeletConfigStage(cluster, clusterCfg, kubeletCfg),
-		getKubeadmInitReconfigureStage(cluster, kubeletCfg, clusterCfg, initCfg),
+		getKubeadmInitCreateClusterConfigStage(clusterCfg),
+		getKubeadmInitCreateKubeletConfigStage(kubeletCfg),
+		getKubeadmInitReconfigureStage(cluster, clusterCfg, initCfg),
 	}
 }
 
@@ -108,35 +108,33 @@ func getKubeadmInitUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	return upgradeStage
 }
 
-func getKubeadmInitCreateClusterConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+func getKubeadmInitCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Cluster Config File",
-		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "cluster-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedClusterConfig(clusterCfg, cluster),
+				Content:     getUpdatedClusterConfig(clusterCfg),
 			},
 		},
 	}
 }
 
-func getKubeadmInitCreateKubeletConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
+func getKubeadmInitCreateKubeletConfigStage(kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Kubelet Config File",
-		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "kubelet-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedKubeletConfig(clusterCfg, kubeletCfg),
+				Content:     getUpdatedKubeletConfig(kubeletCfg),
 			},
 		},
 	}
 }
 
-func getKubeadmInitReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg kubeletv1beta1.KubeletConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration) yip.Stage {
+func getKubeadmInitReconfigureStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration) yip.Stage {
 	reconfigureStage := yip.Stage{
 		Name: "Run Kubeadm Reconfiguration",
 	}
@@ -177,8 +175,6 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
 		AdvertiseAddress: "0.0.0.0",
 	}
-	clusterCfg.APIServer.CertSANs = append(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
-	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
@@ -191,7 +187,7 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	return out.String()
 }
 
-func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, cluster clusterplugin.Cluster) string {
+func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
@@ -200,7 +196,7 @@ func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, clust
 	return out.String()
 }
 
-func getUpdatedKubeletConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
+func getUpdatedKubeletConfig(kubeletCfg kubeletv1beta1.KubeletConfiguration) string {
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})

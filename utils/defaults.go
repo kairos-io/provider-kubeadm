@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
+
+	"github.com/kairos-io/kairos-sdk/clusterplugin"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -13,7 +16,10 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func MutateClusterConfigDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration) {
+func MutateClusterConfigDefaults(cluster clusterplugin.Cluster, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
+
 	if clusterCfg.ImageRepository == "" {
 		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
 	}
@@ -56,8 +62,6 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 		kubeletCfg.Authentication.Anonymous.Enabled = pointer.Bool(false)
 	}
 
-	// On every client request to the kubelet API, execute a webhook (SubjectAccessReview request) to the API server
-	// and ask it whether the client is authorized to access the kubelet API
 	if kubeletCfg.Authorization.Mode == "" {
 		kubeletCfg.Authorization.Mode = kubeletv1beta1.KubeletAuthorizationModeWebhook
 	}
@@ -88,8 +92,6 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 		}
 	}
 
-	// We cannot show a warning for RotateCertificates==false and we must hardcode it to true.
-	// There is no way to determine if the user has set this or not, given the field is a non-pointer.
 	kubeletCfg.RotateCertificates = true
 
 	if len(kubeletCfg.CgroupDriver) == 0 {
@@ -100,4 +102,13 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 	if ok && kubeletCfg.ResolverConfig == nil {
 		kubeletCfg.ResolverConfig = pointer.String("/run/systemd/resolve/resolv.conf")
 	}
+}
+
+func appendIfNotPresent(slice []string, element string) []string {
+	for _, e := range slice {
+		if e == element {
+			return slice
+		}
+	}
+	return append(slice, element)
 }

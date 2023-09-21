@@ -15,17 +15,20 @@ import (
 )
 
 func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	utils.MutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateClusterConfigDefaults(cluster, &clusterCfg)
 	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
-	return []yip.Stage{
+	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfiguration(cluster, joinCfg)),
 		getKubeadmJoinStage(cluster, clusterCfg),
 		getKubeadmJoinUpgradeStage(cluster, clusterCfg),
-		getKubeadmJoinCreateClusterConfigStage(cluster, clusterCfg),
-		getKubeadmJoinCreateKubeletConfigStage(cluster, clusterCfg, kubeletCfg),
-		getKubeadmJoinReconfigureStage(cluster, kubeletCfg, clusterCfg, joinCfg),
 	}
+
+	if cluster.Role != clusterplugin.RoleWorker {
+		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg))
+	}
+
+	return append(joinStg, getKubeadmJoinReconfigureStage(cluster, clusterCfg, joinCfg))
 }
 
 func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) string {
@@ -106,35 +109,33 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	return upgradeStage
 }
 
-func getKubeadmJoinCreateClusterConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Cluster Config File",
-		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "cluster-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedClusterConfig(clusterCfg, cluster),
+				Content:     getUpdatedClusterConfig(clusterCfg),
 			},
 		},
 	}
 }
 
-func getKubeadmJoinCreateKubeletConfigStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
+func getKubeadmJoinCreateKubeletConfigStage(kubeletCfg kubeletv1beta1.KubeletConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Kubelet Config File",
-		If:   fmt.Sprintf("[ \"%s\" != \"worker\" ]", cluster.Role),
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "kubelet-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedKubeletConfig(clusterCfg, kubeletCfg),
+				Content:     getUpdatedKubeletConfig(kubeletCfg),
 			},
 		},
 	}
 }
 
-func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, kubeletCfg kubeletv1beta1.KubeletConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
+func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
 	reconfigureStage := yip.Stage{
 		Name: "Run Kubeadm Join Reconfiguration",
 	}
