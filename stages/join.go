@@ -15,11 +15,11 @@ import (
 )
 
 func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	kubeadmCfg := getJoinNodeConfiguration(cluster, joinCfg)
-	mutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateClusterConfigDefaults(&clusterCfg)
+	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
 	return []yip.Stage{
-		getKubeadmJoinConfigStage(kubeadmCfg),
+		getKubeadmJoinConfigStage(getJoinNodeConfiguration(cluster, joinCfg)),
 		getKubeadmJoinStage(cluster, clusterCfg),
 		getKubeadmJoinUpgradeStage(cluster, clusterCfg),
 		getKubeadmJoinCreateClusterConfigStage(cluster, clusterCfg),
