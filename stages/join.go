@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
@@ -43,10 +45,21 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	if cluster.Role == clusterplugin.RoleControlPlane {
 		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
 			CertificateKey: utils.GetCertificateKey(cluster.ClusterToken),
-			LocalAPIEndpoint: kubeadmapiv3.APIEndpoint{
-				AdvertiseAddress: "0.0.0.0",
-			},
 		}
+
+		var apiEndpoint kubeadmapiv3.APIEndpoint
+
+		if joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress == "" {
+			apiEndpoint.AdvertiseAddress = domain.DefaultAPIAdvertiseAddress
+		} else {
+			apiEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
+		}
+
+		if joinCfg.ControlPlane.LocalAPIEndpoint.BindPort != 0 {
+			apiEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+		}
+
+		joinCfg.ControlPlane.LocalAPIEndpoint = apiEndpoint
 	}
 
 	joinPrinter := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
