@@ -24,6 +24,7 @@ func GetPreKubeadmCommandStages() yip.Stage {
 			"modprobe br_netfilter",
 			"systemctl daemon-reload",
 			"systemctl restart containerd",
+			"mkdir -p /etc/kubernetes/manifests",
 		},
 	}
 }
