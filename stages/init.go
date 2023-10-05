@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -172,9 +174,20 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 		},
 	}
 	initCfg.CertificateKey = certificateKey
-	initCfg.LocalAPIEndpoint = kubeadmapiv3.APIEndpoint{
-		AdvertiseAddress: "0.0.0.0",
+
+	var apiEndpoint kubeadmapiv3.APIEndpoint
+
+	if initCfg.LocalAPIEndpoint.AdvertiseAddress == "" {
+		apiEndpoint.AdvertiseAddress = domain.DefaultAPIAdvertiseAddress
+	} else {
+		apiEndpoint.AdvertiseAddress = initCfg.LocalAPIEndpoint.AdvertiseAddress
 	}
+
+	if initCfg.LocalAPIEndpoint.BindPort != 0 {
+		apiEndpoint.BindPort = initCfg.LocalAPIEndpoint.BindPort
+	}
+
+	initCfg.LocalAPIEndpoint = apiEndpoint
 
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
