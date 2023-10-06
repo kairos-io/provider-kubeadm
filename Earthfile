@@ -9,7 +9,7 @@ ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.34.0
 ARG GOLINT_VERSION=v1.52.2
-ARG GOLANG_VERSION=1.19.10
+ARG GOLANG_VERSION=1.21
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
@@ -27,7 +27,7 @@ build-cosign:
     SAVE ARTIFACT /ko-app/cosign cosign
 
 go-deps:
-    FROM gcr.io/spectro-images-public/golang:1.21-alpine
+    FROM gcr.io/spectro-images-public/golang:${GOLANG_VERSION}-alpine
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
@@ -50,7 +50,6 @@ BUILD_GOLANG:
         RUN go-build.sh -a -o ${BIN} ./${SRC}
     END
 
-    RUN go build -ldflags="${LDFLAGS}" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
