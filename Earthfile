@@ -9,7 +9,7 @@ ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.34.0
 ARG GOLINT_VERSION=v1.52.2
-ARG GOLANG_VERSION=1.19.10
+ARG GOLANG_VERSION=1.21
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
@@ -27,11 +27,11 @@ build-cosign:
     SAVE ARTIFACT /ko-app/cosign cosign
 
 go-deps:
-    FROM gcr.io/spectro-dev-public/golang:1.19-debian
+    FROM gcr.io/spectro-images-public/golang:${GOLANG_VERSION}-alpine
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
-    RUN apt-get update
+    RUN apk update
     SAVE ARTIFACT go.mod AS LOCAL go.mod
     SAVE ARTIFACT go.sum AS LOCAL go.sum
 
@@ -43,15 +43,13 @@ BUILD_GOLANG:
     ARG SRC
 
     IF $FIPS_ENABLED
-        ARG LDFLAGS=-s -w -linkmode=external -extldflags=-static
-        ENV CGO_ENABLED=1
-        ENV GOEXPERIMENT=boringcrypto
+        RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
+        RUN assert-fips.sh ${BIN}
+        RUN assert-static.sh ${BIN}
     ELSE
-        ARG LDFLAGS=-s -w
-        ENV CGO_ENABLED=0
+        RUN go-build.sh -a -o ${BIN} ./${SRC}
     END
 
-    RUN go build -ldflags="${LDFLAGS}" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
