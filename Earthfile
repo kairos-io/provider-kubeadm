@@ -31,7 +31,7 @@ go-deps:
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
-    RUN apk update
+    RUN apt-get update
     SAVE ARTIFACT go.mod AS LOCAL go.mod
     SAVE ARTIFACT go.sum AS LOCAL go.sum
 
