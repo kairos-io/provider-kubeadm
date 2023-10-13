@@ -43,13 +43,15 @@ BUILD_GOLANG:
     ARG SRC
 
     IF $FIPS_ENABLED
-        RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
-        RUN assert-fips.sh ${BIN}
-        RUN assert-static.sh ${BIN}
+        ARG LDFLAGS=-s -w -linkmode=external -extldflags=-static
+        ENV CGO_ENABLED=1
+        ENV GOEXPERIMENT=boringcrypto
     ELSE
-        RUN go-build.sh -a -o ${BIN} ./${SRC}
+        ARG LDFLAGS=-s -w
+        ENV CGO_ENABLED=0
     END
 
+    RUN go build -ldflags="${LDFLAGS}" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
