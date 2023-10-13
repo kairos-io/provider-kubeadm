@@ -3,11 +3,8 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
@@ -80,17 +77,17 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 		kubeletCfg.HealthzPort = pointer.Int32(constants.KubeletHealthzPort)
 	}
 
-	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriod = metav1.Duration{
-			Duration: 120 * time.Second,
-		}
-	}
-
-	if kubeletCfg.ShutdownGracePeriodCriticalPods.Duration == 0 {
-		kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
-			Duration: 60 * time.Second,
-		}
-	}
+	//if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
+	//	kubeletCfg.ShutdownGracePeriod = metav1.Duration{
+	//		Duration: 120 * time.Second,
+	//	}
+	//}
+	//
+	//if kubeletCfg.ShutdownGracePeriodCriticalPods.Duration == 0 {
+	//	kubeletCfg.ShutdownGracePeriodCriticalPods = metav1.Duration{
+	//		Duration: 60 * time.Second,
+	//	}
+	//}
 
 	kubeletCfg.RotateCertificates = true
 
