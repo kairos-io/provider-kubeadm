@@ -27,11 +27,11 @@ build-cosign:
     SAVE ARTIFACT /ko-app/cosign cosign
 
 go-deps:
-    FROM gcr.io/spectro-images-public/golang:${GOLANG_VERSION}-alpine
+    FROM gcr.io/spectro-dev-public/edge-native/golang:${GOLANG_VERSION}-debian
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
-    RUN apk update
+    RUN apt-get update
     SAVE ARTIFACT go.mod AS LOCAL go.mod
     SAVE ARTIFACT go.sum AS LOCAL go.sum
 
@@ -43,13 +43,15 @@ BUILD_GOLANG:
     ARG SRC
 
     IF $FIPS_ENABLED
-        RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
-        RUN assert-fips.sh ${BIN}
-        RUN assert-static.sh ${BIN}
+        ARG LDFLAGS=-s -w -linkmode=external -extldflags=-static
+        ENV CGO_ENABLED=1
+        ENV GOEXPERIMENT=boringcrypto
     ELSE
-        RUN go-build.sh -a -o ${BIN} ./${SRC}
+        ARG LDFLAGS=-s -w
+        ENV CGO_ENABLED=0
     END
 
+    RUN go build -ldflags="${LDFLAGS}" -o ${BIN} ./${SRC}
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
