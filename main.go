@@ -33,8 +33,8 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	}
 
 	preStage := []yip.Stage{
-		stages.GetPreKubeadmCommandStages(),
 		stages.GetPreKubeadmProxyStage(kubeadmConfig, cluster),
+		stages.GetPreKubeadmCommandStages(),
 		stages.GetPreKubeadmImportCoreK8sImageStage(),
 		stages.GetPreKubeadmStoreKubeadmVersionStage(),
 	}
