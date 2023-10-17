@@ -29,6 +29,16 @@ func GetPreKubeadmCommandStages() yip.Stage {
 	}
 }
 
+func GetPreKubeadmSwapOffDisableStage() yip.Stage {
+	return yip.Stage{
+		Name: "Run Pre Kubeadm Disable SwapOff",
+		Commands: []string{
+			"sed -i '/ swap / s/^\\(.*\\)$/#\\1/g' /etc/fstab",
+			"swapoff -a",
+		},
+	}
+}
+
 func GetPreKubeadmImportLocalImageStage(cluster clusterplugin.Cluster) yip.Stage {
 	if cluster.LocalImagesPath == "" {
 		cluster.LocalImagesPath = "/opt/content/images"

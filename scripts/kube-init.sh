@@ -17,6 +17,7 @@ do_kubeadm_reset() {
   kubeadm reset -f
   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
   rm -rf /etc/cni/net.d
+  systemctl restart containerd
 }
 
 backup_kube_vip_manifest_if_present() {
