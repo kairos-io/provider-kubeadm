@@ -65,7 +65,7 @@ func RegenerateKubeletKubeadmArgsFile(clusterCfg *kubeadmapiv3.ClusterConfigurat
 	}
 	stringMap := buildKubeletArgMapCommon(flagOpts)
 	argList := kubeadmutil.BuildArgumentListFromMap(stringMap, nodeReg.KubeletExtraArgs)
-	return fmt.Sprintf("%s=%q\n", constants.KubeletEnvFileVariableName, strings.Join(argList, " "))
+	return fmt.Sprintf("%s=%q", constants.KubeletEnvFileVariableName, strings.Join(argList, " "))
 }
 
 func buildKubeletArgMapCommon(opts kubeletFlagsOpts) map[string]string {

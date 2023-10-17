@@ -69,6 +69,8 @@ regenerate_apiserver_certs_sans() {
   info "deleted existing apiserver pod"
 
   kubeadm init phase upload-config kubeadm --config /opt/kubeadm/cluster-config.yaml
+
+  restart_kubelet
 }
 
 regenerate_kubelet_envs() {
