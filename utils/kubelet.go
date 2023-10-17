@@ -29,8 +29,12 @@ var k8sVersionToPauseImage = map[string]string{
 	"v1.23.12": "3.6",
 	"v1.24.6":  "3.7",
 	"v1.25.2":  "3.8",
+	"v1.25.9":  "3.8",
+	"v1.25.13": "3.8",
 	"v1.26.4":  "3.8",
+	"v1.26.8":  "3.8",
 	"v1.27.2":  "3.9",
+	"v1.27.5":  "3.9",
 }
 
 // WriteKubeletConfigToDisk writes the kubelet config object down to a file
