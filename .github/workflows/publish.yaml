@@ -29,7 +29,7 @@ jobs:
       REGISTRY_USER: ${{ secrets.QUAY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: docker-practice/actions-setup-docker@master
       - uses: earthly/actions-setup@v1
         with:
@@ -62,7 +62,7 @@ jobs:
       REGISTRY_USER: ${{ secrets.QUAY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: docker-practice/actions-setup-docker@master
       - uses: earthly/actions-setup@v1
         with:
