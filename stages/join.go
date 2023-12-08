@@ -43,9 +43,10 @@ func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv
 	}
 
 	if cluster.Role == clusterplugin.RoleControlPlane {
-		joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{
-			CertificateKey: utils.GetCertificateKey(cluster.ClusterToken),
+		if joinCfg.ControlPlane == nil {
+			joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{}
 		}
+		joinCfg.ControlPlane.CertificateKey = utils.GetCertificateKey(cluster.ClusterToken)
 
 		var apiEndpoint kubeadmapiv3.APIEndpoint
 
