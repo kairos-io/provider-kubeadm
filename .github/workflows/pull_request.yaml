@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - dev
 
 permissions:
   contents: read
@@ -38,43 +37,5 @@ jobs:
       - run: earthly --ci --output  +provider-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io
       - name: Push to testing
         run: |
-          docker tag ghcr.io/kairos-io/provider-kubeadm:latest ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:8h
-          docker push ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:8h
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    strategy:
-      matrix:
-        base-image:
-          - quay.io/kairos/core-opensuse-leap:v2.3.2
-          - quay.io/kairos/core-ubuntu-20-lts:v2.3.2
-          - quay.io/kairos/core-ubuntu-22-lts:v2.3.2
-        kubeadm-version:
-          - 1.24.6
-    steps:
-      - uses: actions/checkout@v2
-      - uses: docker-practice/actions-setup-docker@master
-      - uses: earthly/actions-setup@v1
-        with:
-          version: "v0.6.30"
-      - run: earthly --ci +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }}
-  build-fips:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    strategy:
-      matrix:
-        base-image:
-          - quay.io/kairos/core-opensuse-leap:v2.3.2
-          - quay.io/kairos/core-ubuntu-20-lts:v2.3.2
-          - quay.io/kairos/core-ubuntu-22-lts:v2.3.2
-        kubeadm-version:
-          - 1.24.6
-    steps:
-      - uses: actions/checkout@v2
-      - uses: docker-practice/actions-setup-docker@master
-      - uses: earthly/actions-setup@v1
-        with:
-          version: "v0.6.30"
-      - run: earthly --ci +docker-all-platforms --KUBEADM_VERSION=${{ matrix.kubeadm-version }} --BASE_IMAGE=${{ matrix.base-image }} --FIPS_ENABLED=true
+          docker tag ghcr.io/kairos-io/provider-kubeadm:latest ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:24h
+          docker push ttl.sh/kairos-io/provider-kubeadm-${{ github.sha }}:24h
