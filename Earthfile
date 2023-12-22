@@ -42,6 +42,9 @@ BUILD_GOLANG:
     ARG BIN
     ARG SRC
 
+    RUN apk add libc-dev binutils-gold clang
+    ENV CC=clang
+
     IF $FIPS_ENABLED
         RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
         RUN assert-fips.sh ${BIN}
