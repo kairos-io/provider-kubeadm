@@ -2,7 +2,7 @@ VERSION 0.6
 FROM alpine
 
 ARG KUBEADM_VERSION=latest
-ARG BASE_IMAGE=quay.io/kairos/core-opensuse-leap:v2.3.2
+ARG BASE_IMAGE=quay.io/kairos/opensuse:leap-15.5-core-amd64-generic-v2.4.3
 ARG IMAGE_REPOSITORY=quay.io/kairos
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
