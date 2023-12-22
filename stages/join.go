@@ -27,7 +27,7 @@ func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.Clu
 	}
 
 	if cluster.Role != clusterplugin.RoleWorker {
-		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg))
+		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, joinCfg), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg))
 	}
 
 	return append(joinStg, getKubeadmJoinReconfigureStage(cluster, clusterCfg, joinCfg))
@@ -123,14 +123,14 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	return upgradeStage
 }
 
-func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Cluster Config File",
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "cluster-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedClusterConfig(clusterCfg),
+				Content:     getUpdatedJoinClusterConfig(clusterCfg, joinCfg),
 			},
 		},
 	}
@@ -168,4 +168,14 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg ku
 		}
 	}
 	return reconfigureStage
+}
+
+func getUpdatedJoinClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) string {
+	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
+
+	out := bytes.NewBuffer([]byte{})
+	_ = initPrintr.PrintObj(&clusterCfg, out)
+	_ = initPrintr.PrintObj(&joinCfg, out)
+
+	return out.String()
 }

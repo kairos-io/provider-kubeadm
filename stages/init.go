@@ -41,7 +41,7 @@ func GetInitYipStages(cluster clusterplugin.Cluster, initCfg kubeadmapiv3.InitCo
 		getKubeadmInitStage(cluster, clusterCfg),
 		getKubeadmPostInitStage(),
 		getKubeadmInitUpgradeStage(cluster, clusterCfg),
-		getKubeadmInitCreateClusterConfigStage(clusterCfg),
+		getKubeadmInitCreateClusterConfigStage(clusterCfg, initCfg),
 		getKubeadmInitCreateKubeletConfigStage(kubeletCfg),
 		getKubeadmInitReconfigureStage(cluster, clusterCfg, initCfg),
 	}
@@ -110,14 +110,14 @@ func getKubeadmInitUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	return upgradeStage
 }
 
-func getKubeadmInitCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+func getKubeadmInitCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Cluster Config File",
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "cluster-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedClusterConfig(clusterCfg),
+				Content:     getUpdatedInitClusterConfig(clusterCfg, initCfg),
 			},
 		},
 	}
@@ -200,11 +200,12 @@ func getInitNodeConfiguration(cluster clusterplugin.Cluster, initCfg kubeadmapiv
 	return out.String()
 }
 
-func getUpdatedClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+func getUpdatedInitClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration) string {
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
 
 	out := bytes.NewBuffer([]byte{})
 	_ = initPrintr.PrintObj(&clusterCfg, out)
+	_ = initPrintr.PrintObj(&initCfg, out)
 
 	return out.String()
 }
