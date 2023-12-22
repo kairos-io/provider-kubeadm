@@ -109,6 +109,6 @@ then
   regenerate_etcd_manifests
   upload_kubelet_config
 fi
-regenerate_kubelet_envs
 regenerate_kubelet_config
+regenerate_kubelet_envs
 restart_kubelet

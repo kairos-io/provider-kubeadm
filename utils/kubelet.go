@@ -2,17 +2,13 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"strings"
-
-	kyaml "sigs.k8s.io/yaml"
-
-	"k8s.io/klog/v2"
 
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/initsystem"
 
+	"k8s.io/klog/v2"
+
 	nodeutil "k8s.io/component-helpers/node/util"
-	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
@@ -35,25 +31,6 @@ var k8sVersionToPauseImage = map[string]string{
 	"v1.26.8":  "3.8",
 	"v1.27.2":  "3.9",
 	"v1.27.5":  "3.9",
-}
-
-// WriteKubeletConfigToDisk writes the kubelet config object down to a file
-func WriteKubeletConfigToDisk(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration, kubeletConfigPath string) {
-	MutateKubeletDefaults(clusterCfg, kubeletCfg)
-	data, _ := kyaml.Marshal(kubeletCfg)
-	writeConfigBytesToDisk(data, kubeletConfigPath)
-}
-
-func isServiceActive(name string) (bool, error) {
-	initSystem, err := initsystem.GetInitSystem()
-	if err != nil {
-		return false, err
-	}
-	return initSystem.ServiceIsActive(name), nil
-}
-
-func writeConfigBytesToDisk(b []byte, kubeletDir string) {
-	_ = os.WriteFile(kubeletDir, b, 0644)
 }
 
 func RegenerateKubeletKubeadmArgsFile(clusterCfg *kubeadmapiv3.ClusterConfiguration, nodeReg *kubeadmapiv3.NodeRegistrationOptions, nodeRole string) string {
@@ -112,4 +89,12 @@ func getNodeNameAndHostname(cfg *kubeadmapiv3.NodeRegistrationOptions) (string, 
 		nodeName = name
 	}
 	return nodeName, hostname
+}
+
+func isServiceActive(name string) (bool, error) {
+	initSystem, err := initsystem.GetInitSystem()
+	if err != nil {
+		return false, err
+	}
+	return initSystem.ServiceIsActive(name), nil
 }
