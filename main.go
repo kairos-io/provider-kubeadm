@@ -51,7 +51,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	if cluster.Role == clusterplugin.RoleInit {
 		finalStages = append(finalStages, stages.GetInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig)...)
 	}
 
 	cfg := yip.YipConfig{
