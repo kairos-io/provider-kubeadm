@@ -16,7 +16,7 @@ import (
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
-func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
+func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
 	utils.MutateClusterConfigDefaults(cluster, &clusterCfg)
 	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
 
@@ -27,7 +27,7 @@ func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.Clu
 	}
 
 	if cluster.Role != clusterplugin.RoleWorker {
-		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, joinCfg), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg))
+		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, initCfg, joinCfg), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg))
 	}
 
 	return append(joinStg, getKubeadmJoinReconfigureStage(cluster, clusterCfg, joinCfg))
@@ -123,14 +123,14 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	return upgradeStage
 }
 
-func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
+func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
 	return yip.Stage{
 		Name: "Generate Cluster Config File",
 		Files: []yip.File{
 			{
 				Path:        filepath.Join(configurationPath, "cluster-config.yaml"),
 				Permissions: 0640,
-				Content:     getUpdatedJoinClusterConfig(clusterCfg, joinCfg),
+				Content:     getUpdatedJoinClusterConfig(clusterCfg, initCfg, joinCfg),
 			},
 		},
 	}
@@ -170,12 +170,18 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg ku
 	return reconfigureStage
 }
 
-func getUpdatedJoinClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) string {
+func getUpdatedJoinClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) string {
 	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
+
+	if joinCfg.ControlPlane != nil {
+		initCfg.LocalAPIEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
+		initCfg.LocalAPIEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+	}
 
 	out := bytes.NewBuffer([]byte{})
 	_ = initPrintr.PrintObj(&clusterCfg, out)
 	_ = initPrintr.PrintObj(&joinCfg, out)
+	_ = initPrintr.PrintObj(&initCfg, out)
 
 	return out.String()
 }
