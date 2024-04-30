@@ -14,8 +14,8 @@ KUBE_VERSION=$1
 ARCH=$(uname -m)
 OS=$(uname)
 ARCHIVE_NAME=go-containerregistry_"${OS}"_"${ARCH}".tar.gz
-TEMP_DIR=/opt/kubeadm/temp
-IMAGES_DIR=/opt/kubeadm/kube-images
+TEMP_DIR=/opt/kubeadm-temp
+IMAGES_DIR=/opt/kube-images
 IMAGE_FILE=images.list
 
 # create temp dir
