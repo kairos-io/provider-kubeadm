@@ -7,7 +7,10 @@ exec 19>> /var/log/kube-post-init.log
 export BASH_XTRACEFD="19"
 set -x
 
+root_path=$1
+
 export KUBECONFIG=/etc/kubernetes/admin.conf
+export PATH="$PATH:$root_path/usr/bin"
 
 while true;
 do
