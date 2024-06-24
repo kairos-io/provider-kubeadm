@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	helperScriptPath = "/opt/kubeadm/scripts"
+	helperScriptPath = "opt/kubeadm/scripts"
 )
 
 func GetPreKubeadmCommandStages() yip.Stage {
@@ -41,35 +41,35 @@ func GetPreKubeadmSwapOffDisableStage() yip.Stage {
 
 func GetPreKubeadmImportLocalImageStage(cluster clusterplugin.Cluster) yip.Stage {
 	if cluster.LocalImagesPath == "" {
-		cluster.LocalImagesPath = "/opt/content/images"
+		cluster.LocalImagesPath = filepath.Join(cluster.ClusterRootPath, "opt/content/images")
 	}
 
 	return yip.Stage{
 		Name: "Run Import Local Images",
 		Commands: []string{
-			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(helperScriptPath, "import.sh"), cluster.LocalImagesPath),
+			fmt.Sprintf("chmod +x %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "import.sh"), cluster.LocalImagesPath),
 		},
 		If: fmt.Sprintf("[ -d %s ]", cluster.LocalImagesPath),
 	}
 }
 
-func GetPreKubeadmImportCoreK8sImageStage() yip.Stage {
+func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Load Kube Images",
 		Commands: []string{
-			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s /opt/kube-images > /var/log/import-kube-images.log", filepath.Join(helperScriptPath, "import.sh")),
+			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s %sopt/kube-images > /var/log/import-kube-images.log", rootPath, filepath.Join(rootPath, helperScriptPath, "import.sh")),
 		},
 	}
 }
 
-func GetPreKubeadmStoreKubeadmVersionStage() yip.Stage {
+func GetPreKubeadmStoreKubeadmVersionStage(rootPath string) yip.Stage {
 	return yip.Stage{
-		If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
+		If:   fmt.Sprintf("[ ! -f %sopt/sentinel_kubeadmversion ]", rootPath),
 		Name: "Create kubeadm sentinel version file",
 		Commands: []string{
-			"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+			fmt.Sprintf("kubeadm version -o short > %sopt/sentinel_kubeadmversion", rootPath),
 		},
 	}
 }
