@@ -37,6 +37,8 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 		kubeletCfg.StaticPodPath = kubeadmapiv3.DefaultManifestsDir
 	}
 
+	kubeletCfg.ContainerRuntimeEndpoint = "/run/spectro/containerd/containerd.sock"
+
 	var clusterDNS string
 	dnsIP, err := constants.GetDNSIP(clusterCfg.Networking.ServiceSubnet)
 	if err != nil {

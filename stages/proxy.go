@@ -38,7 +38,7 @@ func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[
 	var proxy []string
 
 	httpProxy := proxyMap["HTTP_PROXY"]
-	httpsProxy := proxyMap["HTTP_PROXY"]
+	httpsProxy := proxyMap["HTTPS_PROXY"]
 	userNoProxy := proxyMap["NO_PROXY"]
 
 	if utils.IsProxyConfigured(proxyMap) {
