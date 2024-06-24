@@ -8,10 +8,11 @@ set -x
 
 NODE_ROLE=$1
 
-PROXY_CONFIGURED=$2
-proxy_http=$3
-proxy_https=$4
-proxy_no=$5
+root_path=$2
+PROXY_CONFIGURED=$3
+proxy_http=$4
+proxy_https=$5
+proxy_no=$6
 
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
