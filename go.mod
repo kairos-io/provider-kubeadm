@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/kairos-io/kairos-sdk v0.1.1
-	github.com/mudler/yip v1.6.0
+	github.com/mudler/yip v1.9.0
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/apimachinery v0.27.1
 	k8s.io/cli-runtime v0.24.0
@@ -52,7 +52,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo/v2 v2.17.1 // indirect
-	github.com/onsi/gomega v1.32.0 // indirect
+	github.com/onsi/gomega v1.33.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twpayne/go-vfs v1.7.2 // indirect
 	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
