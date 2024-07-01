@@ -78,4 +78,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace github.com/kairos-io/kairos-sdk => /Users/piyush/Workspace/spectrocloud/niyanu-kairos-sdk
+replace github.com/kairos-io/kairos-sdk => github.com/nianyush/kairos-sdk v0.2.2-0.20240624193631-51ff23e15a98

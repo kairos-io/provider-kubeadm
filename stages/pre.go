@@ -16,15 +16,14 @@ func GetPreKubeadmCommandStages() yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
 		Systemctl: yip.Systemctl{
-			Enable: []string{"kubelet"},
+			Enable: []string{"spectro-kubelet"},
 		},
 		Commands: []string{
 			"sysctl --system",
 			"modprobe overlay",
 			"modprobe br_netfilter",
 			"systemctl daemon-reload",
-			"systemctl restart containerd",
-			"mkdir -p /etc/kubernetes/manifests",
+			"systemctl restart spectro-containerd",
 		},
 	}
 }
@@ -59,17 +58,17 @@ func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 		Name: "Run Load Kube Images",
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %sopt/kube-images > /var/log/import-kube-images.log", rootPath, filepath.Join(rootPath, helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images"), rootPath),
 		},
 	}
 }
 
 func GetPreKubeadmStoreKubeadmVersionStage(rootPath string) yip.Stage {
 	return yip.Stage{
-		If:   fmt.Sprintf("[ ! -f %sopt/sentinel_kubeadmversion ]", rootPath),
+		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(rootPath, "opt/sentinel_kubeadmversion")),
 		Name: "Create kubeadm sentinel version file",
 		Commands: []string{
-			fmt.Sprintf("kubeadm version -o short > %sopt/sentinel_kubeadmversion", rootPath),
+			fmt.Sprintf("kubeadm version -o short > %s", filepath.Join(rootPath, "opt/sentinel_kubeadmversion")),
 		},
 	}
 }

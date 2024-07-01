@@ -74,7 +74,7 @@ func getKubeadmInitStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.
 		}
 	} else {
 		initStage.Commands = []string{
-			fmt.Sprintf("bash %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-init.sh")),
+			fmt.Sprintf("bash %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-init.sh"), filepath.Join(cluster.ClusterRootPath, "opt")),
 			fmt.Sprintf("touch %s", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.init")),
 		}
 	}
