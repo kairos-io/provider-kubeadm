@@ -12,7 +12,7 @@ do
     if [ "$ROOT_PATH" = "/" ]; then
       /opt/bin/ctr -n k8s.io image import "$tarfile" --all-platforms
     else
-      "$ROOT_PATH"/opt/bin/ctr -n k8s.io --address /run/spectro/containerd/containerd.sock image import "$tarfile" --all-platforms
+      "$ROOT_PATH"/opt/spectro/bin/ctr -n k8s.io --address /run/spectro/containerd/containerd.sock image import "$tarfile" --all-platforms
     fi
     if [ $? -eq 0 ]; then
       echo "Import successful: $tarfile (attempt $i)"

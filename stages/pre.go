@@ -16,7 +16,7 @@ func GetPreKubeadmCommandStages() yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
 		Systemctl: yip.Systemctl{
-			Enable: []string{"spectro-kubelet"},
+			Enable: []string{"kubelet"},
 		},
 		Commands: []string{
 			"sysctl --system",
