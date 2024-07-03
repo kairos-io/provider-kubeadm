@@ -18,6 +18,8 @@ proxy_http=$5
 proxy_https=$6
 proxy_no=$7
 
+export PATH="$PATH:$root_path/usr/bin"
+
 certs_sans_revision_path="$root_path/kubeadm/.kubeadm_certs_sans_revision"
 
 if [ -n "$proxy_no" ]; then

@@ -14,10 +14,12 @@ proxy_https=$4
 proxy_no=$5
 KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 
+export PATH="$PATH:$root_path/usr/bin"
+
 do_kubeadm_reset() {
   kubeadm reset -f
   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
-  rm -rf /etc/spectro/cni/net.d
+  rm -rf "root_path"/opt/spectro/cni/net.d
   systemctl daemon-reload
   systemctl restart spectro-containerd
 }

@@ -14,6 +14,8 @@ proxy_http=$4
 proxy_https=$5
 proxy_no=$6
 
+export PATH="$PATH:$root_path/usr/bin"
+
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
   export no_proxy=$proxy_no

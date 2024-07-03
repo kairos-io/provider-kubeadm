@@ -8,6 +8,7 @@ export BASH_XTRACEFD="19"
 set -x
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
+export PATH="$PATH:$root_path/usr/bin"
 
 while true;
 do
