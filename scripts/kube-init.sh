@@ -32,7 +32,7 @@ backup_kube_vip_manifest_if_present() {
 
 restore_kube_vip_manifest_after_reset() {
   if [ -f "$root_path/opt/kubeadm/kube-vip.yaml" ]; then
-      mkdir -p /etc/kubernetes/manifests
+      mkdir -p "$root_path"/etc/kubernetes/manifests
       cp "$root_path"/opt/kubeadm/kube-vip.yaml $KUBE_VIP_LOC
   fi
 }

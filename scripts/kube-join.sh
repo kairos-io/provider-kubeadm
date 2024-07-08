@@ -29,19 +29,19 @@ do_kubeadm_reset() {
 
 backup_kube_vip_manifest_if_present() {
   if [ -f "$KUBE_VIP_LOC" ] && [ "$NODE_ROLE" != "worker" ]; then
-    cp $KUBE_VIP_LOC "$root_path"/kubeadm/kube-vip.yaml
+    cp $KUBE_VIP_LOC "$root_path"/opt/kubeadm/kube-vip.yaml
   fi
 }
 
 restore_kube_vip_manifest_after_reset() {
-  if [ -f "/opt/kubeadm/kube-vip.yaml" ] && [ "$NODE_ROLE" != "worker" ]; then
-      mkdir -p /etc/kubernetes/manifests
-      cp "$root_path"/kubeadm/kube-vip.yaml $KUBE_VIP_LOC
+  if [ -f "$root_path/opt/kubeadm/kube-vip.yaml" ] && [ "$NODE_ROLE" != "worker" ]; then
+      mkdir -p "$root_path"/etc/kubernetes/manifests
+      cp "$root_path"/opt/kubeadm/kube-vip.yaml $KUBE_VIP_LOC
   fi
 }
 
 if [ "$PROXY_CONFIGURED" = true ]; then
-  until HTTP_PROXY=$proxy_http http_proxy=$proxy_http HTTPS_PROXY=$proxy_https https_proxy=$proxy_https NO_PROXY=$proxy_no no_proxy=$proxy_no kubeadm join --config "$root_path"/kubeadm/kubeadm.yaml --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests -v=5 > /dev/null
+  until HTTP_PROXY=$proxy_http http_proxy=$proxy_http HTTPS_PROXY=$proxy_https https_proxy=$proxy_https NO_PROXY=$proxy_no no_proxy=$proxy_no kubeadm join --config "$root_path"/opt/kubeadm/kubeadm.yaml --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests -v=5 > /dev/null
   do
     backup_kube_vip_manifest_if_present
     echo "failed to apply kubeadm join, will retry in 10s";
@@ -52,7 +52,7 @@ if [ "$PROXY_CONFIGURED" = true ]; then
     restore_kube_vip_manifest_after_reset
   done;
 else
-  until kubeadm join --config "$root_path"/kubeadm/kubeadm.yaml --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests -v=5 > /dev/null
+  until kubeadm join --config "$root_path"/opt/kubeadm/kubeadm.yaml --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests -v=5 > /dev/null
   do
    backup_kube_vip_manifest_if_present
    echo "failed to apply kubeadm join, will retry in 10s";

@@ -113,11 +113,11 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 		}
 	} else {
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath),
 		}
 	}
 	return upgradeStage
