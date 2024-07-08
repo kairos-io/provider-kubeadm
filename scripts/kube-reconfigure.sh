@@ -20,7 +20,7 @@ proxy_no=$7
 
 export PATH="$PATH:$root_path/usr/bin"
 
-certs_sans_revision_path="$root_path/kubeadm/.kubeadm_certs_sans_revision"
+certs_sans_revision_path="$root_path/opt/kubeadm/.kubeadm_certs_sans_revision"
 
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
@@ -40,11 +40,11 @@ fi
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
 regenerate_kube_components_manifests() {
-  sudo -E bash -c "kubeadm init phase control-plane apiserver --config $root_path/kubeadm/cluster-config.yaml"
-  sudo -E bash -c "kubeadm init phase control-plane controller-manager --config $root_path/kubeadm/cluster-config.yaml"
-  sudo -E bash -c "kubeadm init phase control-plane scheduler --config $root_path/kubeadm/cluster-config.yaml"
+  sudo -E bash -c "kubeadm init phase control-plane apiserver --config $root_path/opt/kubeadm/cluster-config.yaml"
+  sudo -E bash -c "kubeadm init phase control-plane controller-manager --config $root_path/opt/kubeadm/cluster-config.yaml"
+  sudo -E bash -c "kubeadm init phase control-plane scheduler --config $root_path/opt/kubeadm/cluster-config.yaml"
 
-  kubeadm init phase upload-config kubeadm --config "$root_path"/kubeadm/cluster-config.yaml
+  kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
 
   info "regenerated kube components manifest"
 }
@@ -65,13 +65,13 @@ regenerate_apiserver_certs_sans() {
   rm /etc/kubernetes/pki/apiserver.{crt,key}
   info "regenerated removed existing apiserver certs"
 
-  kubeadm init phase certs apiserver --config "$root_path"/kubeadm/cluster-config.yaml
+  kubeadm init phase certs apiserver --config "$root_path"/opt/kubeadm/cluster-config.yaml
   info "regenerated apiserver certs"
 
   crictl pods 2>/dev/null | grep kube-apiserver | cut -d' ' -f1 | xargs -I %s sh -c '{ crictl stopp %s; crictl rmp %s; }' 2>/dev/null
   info "deleted existing apiserver pod"
 
-  kubeadm init phase upload-config kubeadm --config "$root_path"/kubeadm/cluster-config.yaml
+  kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
 
   restart_kubelet
 }
@@ -86,7 +86,7 @@ regenerate_kubelet_config() {
 }
 
 upload_kubelet_config() {
-  kubeadm init phase upload-config kubelet --config "$root_path"/kubeadm/kubelet-config.yaml
+  kubeadm init phase upload-config kubelet --config "$root_path"/opt/kubeadm/kubelet-config.yaml
 }
 
 restart_kubelet() {
@@ -100,7 +100,7 @@ regenerate_etcd_manifests() {
     sleep 60
     continue
   done
-  kubeadm init phase etcd local --config "$root_path"/kubeadm/cluster-config.yaml
+  kubeadm init phase etcd local --config "$root_path"/opt/kubeadm/cluster-config.yaml
   info "regenerated etcd manifest"
   sleep 60
 }

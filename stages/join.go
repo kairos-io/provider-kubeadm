@@ -93,12 +93,12 @@ func getKubeadmJoinStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 			fmt.Sprintf("touch %s", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.join")),
 		}
 	} else {
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-join.sh"), cluster.Role),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, cluster.ClusterRootPath),
 			fmt.Sprintf("touch %s", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.join")),
 		}
 	}
@@ -113,11 +113,11 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 		}
 	} else {
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role),
+			fmt.Sprintf("bash %s %s", filepath.Join(helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath),
 		}
 	}
 	return upgradeStage
@@ -160,11 +160,11 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg ku
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, filepath.Join(cluster.ClusterRootPath, "opt"), proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, cluster.ClusterRootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, filepath.Join(cluster.ClusterRootPath, "opt")),
+			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, cluster.ClusterRootPath),
 		}
 	}
 	return reconfigureStage
