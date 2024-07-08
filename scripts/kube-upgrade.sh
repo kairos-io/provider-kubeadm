@@ -48,7 +48,7 @@ delete_lock_config_map(){
 run_upgrade() {
     echo "running upgrade process on $NODE_ROLE"
 
-    old_version=$(cat "root_path"/opt/sentinel_kubeadmversion)
+    old_version=$(cat "$root_path"/opt/sentinel_kubeadmversion)
     echo "found last deployed version $old_version"
 
     current_version=$(kubeadm version -o short)
@@ -117,7 +117,7 @@ run_upgrade() {
           if sudo -E bash -c "$upgrade_command"
           then
               # Update current client version in the version file
-              echo "$current_version" > "root_path"/opt/sentinel_kubeadmversion
+              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
               old_version=$current_version
 
               delete_lock_config_map
@@ -130,7 +130,7 @@ run_upgrade() {
           if $upgrade_command
           then
               # Update current client version in the version file
-              echo "$current_version" > "root_path"/opt/sentinel_kubeadmversion
+              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
               old_version=$current_version
 
               delete_lock_config_map
