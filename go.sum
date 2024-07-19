@@ -184,6 +184,8 @@ github.com/golang/protobuf v1.5.1/go.mod h1:DopwsBzvsk0Fs44TXzsVbJyPhcCPeIwnvohx
 github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
 github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
 github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
+github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
+github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.1/go.mod h1:xXMiIv4Fb/0kKde4SpL7qlzvu5cMJDRkFDxJfI9uaxA=
@@ -947,6 +949,8 @@ k8s.io/kubelet v0.27.1 h1:IkfZ0N9CX/g6EDis7nJw8ZsOuHcpFA6cm0pXQx0g5TY=
 k8s.io/kubelet v0.27.1/go.mod h1:g3cIhpZPawo/MvsdnmcLmqDJvDPdbUFkzfyLNz03nQg=
 k8s.io/kubernetes v1.27.8 h1:K848lTo/D0jvrxUlTvw4nNADixbhXLHgKNDP/KlFGy8=
 k8s.io/kubernetes v1.27.8/go.mod h1:PUXXrx0IhAi+kI9BMDqNJHUnLndVv9W0DkriqyjuJOs=
+k8s.io/kubernetes v1.27.16 h1:DHFqj/HTUqHStFlRH9wCKPocqgHsjR6Q/DzYarB2QQE=
+k8s.io/kubernetes v1.27.16/go.mod h1:T4toI2XSWG5FJoq/H8q9eFYPymAxe/k4UnaC00uPnMs=
 k8s.io/utils v0.0.0-20210802155522-efc7438f0176/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20230209194617-a36077c30491 h1:r0BAOLElQnnFhE/ApUsg3iHdVYYPBjNSSOMowRZxxsY=
