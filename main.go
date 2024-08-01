@@ -54,6 +54,19 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
 	}
 
+	// stages for service restarts
+	serviceStage := []yip.Stage{
+		{
+			Commands: []string{
+				"systemctl enable kubelet && systemctl restart kubelet",
+				"systemctl enable spectro-containerd && systemctl restart spectro-containerd",
+			},
+			Name: "Enable and restart services",
+		},
+	}
+
+	finalStages = append(finalStages, serviceStage...)
+
 	cfg := yip.YipConfig{
 		Name: "Kubeadm Kairos Cluster Provider",
 		Stages: map[string][]yip.Stage{
