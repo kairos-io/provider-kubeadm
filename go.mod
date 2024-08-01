@@ -1,10 +1,10 @@
 module github.com/kairos-io/kairos/provider-kubeadm
 
-go 1.19
+go 1.22.5
 
 require (
 	github.com/kairos-io/kairos-sdk v0.1.1
-	github.com/mudler/yip v1.9.2
+	github.com/mudler/yip v1.9.4
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/apimachinery v0.27.1
 	k8s.io/cli-runtime v0.24.0
@@ -62,11 +62,11 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twpayne/go-vfs v1.7.2 // indirect
 	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
