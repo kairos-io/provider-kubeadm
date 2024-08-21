@@ -1,20 +1,22 @@
 module github.com/kairos-io/kairos/provider-kubeadm
 
-go 1.22
+go 1.22.5
+
+toolchain go1.22.6
 
 require (
-	github.com/kairos-io/kairos-sdk v0.1.8
-	github.com/mudler/yip v1.8.1
+	github.com/kairos-io/kairos-sdk v0.4.0
+	github.com/mudler/yip v1.9.4
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/apimachinery v0.27.1
 	k8s.io/cli-runtime v0.24.0
 	k8s.io/cluster-bootstrap v0.24.0
 	k8s.io/component-helpers v0.27.1
-	k8s.io/klog/v2 v2.90.1
+	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubelet v0.27.1
 	k8s.io/kubernetes v1.27.8
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -58,11 +60,11 @@ require (
 	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
