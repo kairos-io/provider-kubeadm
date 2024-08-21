@@ -19,15 +19,15 @@ import (
 func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
 	utils.MutateClusterConfigDefaults(cluster, &clusterCfg)
 	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
-
+	clusterRootPath := utils.GetClusterRootPath(cluster)
 	joinStg := []yip.Stage{
-		getKubeadmJoinConfigStage(getJoinNodeConfiguration(cluster, joinCfg), cluster.ClusterRootPath),
+		getKubeadmJoinConfigStage(getJoinNodeConfiguration(cluster, joinCfg), clusterRootPath),
 		getKubeadmJoinStage(cluster, clusterCfg),
 		getKubeadmJoinUpgradeStage(cluster, clusterCfg),
 	}
 
 	if cluster.Role != clusterplugin.RoleWorker {
-		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, initCfg, joinCfg, cluster.ClusterRootPath), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg, cluster.ClusterRootPath))
+		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, initCfg, joinCfg, clusterRootPath), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg, clusterRootPath))
 	}
 
 	return append(joinStg, getKubeadmJoinReconfigureStage(cluster, clusterCfg, joinCfg))
@@ -85,21 +85,23 @@ func getKubeadmJoinConfigStage(kubeadmCfg, rootPath string) yip.Stage {
 }
 
 func getKubeadmJoinStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+	clusterRootPath := utils.GetClusterRootPath(cluster)
+
 	joinStage := yip.Stage{
 		Name: "Run Kubeadm Join",
-		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.join")),
+		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 	}
 
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
-			fmt.Sprintf("touch %s", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.join")),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 		}
 	} else {
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, cluster.ClusterRootPath),
-			fmt.Sprintf("touch %s", filepath.Join(cluster.ClusterRootPath, "opt/kubeadm.join")),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath),
+			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 		}
 	}
 	return joinStage
@@ -110,14 +112,16 @@ func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubead
 		Name: "Run Kubeadm Join Upgrade",
 	}
 
+	clusterRootPath := utils.GetClusterRootPath(cluster)
+
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 		}
 	} else {
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, cluster.ClusterRootPath),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, clusterRootPath),
 		}
 	}
 	return upgradeStage
@@ -154,17 +158,18 @@ func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg ku
 		Name: "Run Kubeadm Join Reconfiguration",
 	}
 
+	clusterRootPath := utils.GetClusterRootPath(cluster)
 	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &joinCfg.NodeRegistration, string(cluster.Role))
 	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
 
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, cluster.ClusterRootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, clusterRootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(cluster.ClusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, cluster.ClusterRootPath),
+			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, clusterRootPath),
 		}
 	}
 	return reconfigureStage

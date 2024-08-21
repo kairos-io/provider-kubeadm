@@ -32,12 +32,14 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
+	clusterRootPath := utils.GetClusterRootPath(cluster)
+
 	preStage := []yip.Stage{
 		stages.GetPreKubeadmProxyStage(kubeadmConfig, cluster),
 		stages.GetPreKubeadmCommandStages(),
 		stages.GetPreKubeadmSwapOffDisableStage(),
-		stages.GetPreKubeadmImportCoreK8sImageStage(cluster.ClusterRootPath),
-		stages.GetPreKubeadmStoreKubeadmVersionStage(cluster.ClusterRootPath),
+		stages.GetPreKubeadmImportCoreK8sImageStage(clusterRootPath),
+		stages.GetPreKubeadmStoreKubeadmVersionStage(clusterRootPath),
 	}
 
 	if cluster.ImportLocalImages {
