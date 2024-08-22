@@ -5,7 +5,7 @@ go 1.22.5
 toolchain go1.22.6
 
 require (
-	github.com/kairos-io/kairos-sdk v0.4.0
+	github.com/kairos-io/kairos-sdk v0.4.1
 	github.com/mudler/yip v1.9.4
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/apimachinery v0.27.1
