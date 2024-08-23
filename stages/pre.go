@@ -13,19 +13,11 @@ const (
 	helperScriptPath = "opt/kubeadm/scripts"
 )
 
-func GetPreKubeadmCommandStages() yip.Stage {
+func GetPreKubeadmCommandStages(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
-		Systemctl: yip.Systemctl{
-			Enable: []string{"kubelet", "spectro-containerd"},
-			Start:  []string{"kubelet", "spectro-containerd"},
-		},
 		Commands: []string{
-			"sysctl --system",
-			"modprobe overlay",
-			"modprobe br_netfilter",
-			"systemctl daemon-reload",
-			"systemctl restart spectro-containerd",
+			fmt.Sprintf("/bin/bash %s", filepath.Join(rootPath, helperScriptPath, "kube-pre-init.sh")),
 		},
 	}
 }
