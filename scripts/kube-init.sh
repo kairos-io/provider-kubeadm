@@ -17,7 +17,12 @@ KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 export PATH="$PATH:$root_path/usr/bin"
 
 do_kubeadm_reset() {
-  kubeadm reset -f
+  if [ -f /run/spectro/containerd/containerd.sock ]; then
+    kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+  else
+    kubeadm reset -f --cleanup-tmp-dir
+  fi
+
   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
   rm -rf "$root_path"/opt/spectro/cni/net.d
   systemctl daemon-reload
