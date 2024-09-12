@@ -5,26 +5,19 @@ import (
 	"path/filepath"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 )
 
 const (
-	helperScriptPath = "/opt/kubeadm/scripts"
+	helperScriptPath = "opt/kubeadm/scripts"
 )
 
-func GetPreKubeadmCommandStages() yip.Stage {
+func GetPreKubeadmCommandStages(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
-		Systemctl: yip.Systemctl{
-			Enable: []string{"kubelet"},
-		},
 		Commands: []string{
-			"sysctl --system",
-			"modprobe overlay",
-			"modprobe br_netfilter",
-			"systemctl daemon-reload",
-			"systemctl restart containerd",
-			"mkdir -p /etc/kubernetes/manifests",
+			fmt.Sprintf("/bin/bash %s %s", filepath.Join(rootPath, helperScriptPath, "kube-pre-init.sh"), rootPath),
 		},
 	}
 }
@@ -40,36 +33,28 @@ func GetPreKubeadmSwapOffDisableStage() yip.Stage {
 }
 
 func GetPreKubeadmImportLocalImageStage(cluster clusterplugin.Cluster) yip.Stage {
+	clusterRootPath := utils.GetClusterRootPath(cluster)
+
 	if cluster.LocalImagesPath == "" {
-		cluster.LocalImagesPath = "/opt/content/images"
+		cluster.LocalImagesPath = filepath.Join(clusterRootPath, "opt/content/images")
 	}
 
 	return yip.Stage{
 		Name: "Run Import Local Images",
 		Commands: []string{
-			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(helperScriptPath, "import.sh"), cluster.LocalImagesPath),
+			fmt.Sprintf("chmod +x %s", filepath.Join(clusterRootPath, helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(clusterRootPath, helperScriptPath, "import.sh"), cluster.LocalImagesPath),
 		},
 		If: fmt.Sprintf("[ -d %s ]", cluster.LocalImagesPath),
 	}
 }
 
-func GetPreKubeadmImportCoreK8sImageStage() yip.Stage {
+func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Load Kube Images",
 		Commands: []string{
-			fmt.Sprintf("chmod +x %s", filepath.Join(helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s /opt/kube-images > /var/log/import-kube-images.log", filepath.Join(helperScriptPath, "import.sh")),
-		},
-	}
-}
-
-func GetPreKubeadmStoreKubeadmVersionStage() yip.Stage {
-	return yip.Stage{
-		If:   "[ ! -f /opt/sentinel_kubeadmversion ]",
-		Name: "Create kubeadm sentinel version file",
-		Commands: []string{
-			"kubeadm version -o short > /opt/sentinel_kubeadmversion",
+			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
+			fmt.Sprintf("/bin/sh %s %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images"), rootPath),
 		},
 	}
 }

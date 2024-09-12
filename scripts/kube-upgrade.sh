@@ -8,10 +8,13 @@ set -x
 
 NODE_ROLE=$1
 
-PROXY_CONFIGURED=$2
-proxy_http=$3
-proxy_https=$4
-proxy_no=$5
+root_path=$2
+PROXY_CONFIGURED=$3
+proxy_http=$4
+proxy_https=$5
+proxy_no=$6
+
+export PATH="$PATH:$root_path/usr/bin"
 
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
@@ -45,7 +48,7 @@ delete_lock_config_map(){
 run_upgrade() {
     echo "running upgrade process on $NODE_ROLE"
 
-    old_version=$(cat /opt/sentinel_kubeadmversion)
+    old_version=$(cat "$root_path"/opt/sentinel_kubeadmversion)
     echo "found last deployed version $old_version"
 
     current_version=$(kubeadm version -o short)
@@ -114,7 +117,7 @@ run_upgrade() {
           if sudo -E bash -c "$upgrade_command"
           then
               # Update current client version in the version file
-              echo "$current_version" > /opt/sentinel_kubeadmversion
+              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
               old_version=$current_version
 
               delete_lock_config_map
@@ -127,7 +130,7 @@ run_upgrade() {
           if $upgrade_command
           then
               # Update current client version in the version file
-              echo "$current_version" > /opt/sentinel_kubeadmversion
+              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
               old_version=$current_version
 
               delete_lock_config_map
