@@ -39,7 +39,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		stages.GetPreKubeadmCommandStages(clusterRootPath),
 		stages.GetPreKubeadmSwapOffDisableStage(),
 		stages.GetPreKubeadmImportCoreK8sImageStage(clusterRootPath),
-		stages.GetPreKubeadmStoreKubeadmVersionStage(clusterRootPath),
 	}
 
 	if cluster.ImportLocalImages {
