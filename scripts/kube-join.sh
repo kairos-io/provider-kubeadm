@@ -20,7 +20,7 @@ export PATH="$PATH:$root_path/usr/bin"
 KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 
 do_kubeadm_reset() {
-  if [ -f /run/spectro/containerd/containerd.sock ]; then
+  if [ -S /run/spectro/containerd/containerd.sock ]; then
     kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
   else
     kubeadm reset -f --cleanup-tmp-dir

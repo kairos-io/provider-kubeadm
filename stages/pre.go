@@ -17,7 +17,7 @@ func GetPreKubeadmCommandStages(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
 		Commands: []string{
-			fmt.Sprintf("/bin/bash %s", filepath.Join(rootPath, helperScriptPath, "kube-pre-init.sh")),
+			fmt.Sprintf("/bin/bash %s %s", filepath.Join(rootPath, helperScriptPath, "kube-pre-init.sh"), rootPath),
 		},
 	}
 }
@@ -55,16 +55,6 @@ func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
 			fmt.Sprintf("/bin/sh %s %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images"), rootPath),
-		},
-	}
-}
-
-func GetPreKubeadmStoreKubeadmVersionStage(rootPath string) yip.Stage {
-	return yip.Stage{
-		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(rootPath, "opt/sentinel_kubeadmversion")),
-		Name: "Create kubeadm sentinel version file",
-		Commands: []string{
-			fmt.Sprintf("kubeadm version -o short > %s", filepath.Join(rootPath, "opt/sentinel_kubeadmversion")),
 		},
 	}
 }

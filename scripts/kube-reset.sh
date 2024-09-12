@@ -9,7 +9,7 @@ fi
 
 export PATH="$PATH:$STYLUS_ROOT/usr/bin"
 
-if [ -f /run/spectro/containerd/containerd.sock ]; then
+if [ -S /run/spectro/containerd/containerd.sock ]; then
     kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
 else
     kubeadm reset -f --cleanup-tmp-dir
