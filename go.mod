@@ -14,7 +14,7 @@ require (
 	k8s.io/component-helpers v0.27.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubelet v0.27.1
-	k8s.io/kubernetes v1.27.8
+	k8s.io/kubernetes v1.27.16
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/yaml v1.4.0
 )
