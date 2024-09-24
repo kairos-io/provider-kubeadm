@@ -41,7 +41,7 @@ jobs:
         with:
           version: "latest"
       - run: echo "${{ secrets.GCR_DEV_PUBLIC_B64_TOKEN }}" | base64 -d | docker login -u _json_key --password-stdin https://gcr.io
-      - run: earthly --ci --push +provider-package-all-platforms --IMAGE_REPOSITORY=gcr.io/spectro-dev-public/kairos-io
+      - run: earthly --ci --push --output +provider-package-all-platforms --IMAGE_REPOSITORY=gcr.io/spectro-dev-public/kairos-io
   build-fips-provider-package:
     runs-on: ubuntu-latest
     permissions:
@@ -59,4 +59,4 @@ jobs:
         with:
           version: "latest"
       - run: echo "${{ secrets.GCR_DEV_PUBLIC_B64_TOKEN }}" | base64 -d | docker login -u _json_key --password-stdin https://gcr.io
-      - run: earthly --ci --push +provider-fips-package-all-platforms --IMAGE_REPOSITORY=gcr.io/spectro-dev-public/kairos-io --FIPS_ENABLED=true
+      - run: earthly --ci --push --output +provider-fips-package-all-platforms --IMAGE_REPOSITORY=gcr.io/spectro-dev-public/kairos-io --FIPS_ENABLED=true
