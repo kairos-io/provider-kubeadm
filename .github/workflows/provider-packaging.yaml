@@ -13,10 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: docker-practice/actions-setup-docker@master
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
       - uses: earthly/actions-setup@v1
         with:
-          version: "v0.6.30"
+          version: "latest"
       - run: earthly --ci +lint
   build-provider-package:
     runs-on: ubuntu-latest
@@ -24,29 +30,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - uses: docker-practice/actions-setup-docker@master
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
       - uses: earthly/actions-setup@v1
         with:
-          version: "v0.6.30"
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }} 
-      - run: earthly --ci --push +provider-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io
-  build-provider-fips-package:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker-practice/actions-setup-docker@master
-      - uses: earthly/actions-setup@v1
-        with:
-          version: "v0.6.30"
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - run: earthly --ci --push +provider-fips-package-all-platforms --IMAGE_REPOSITORY=ghcr.io/kairos-io --FIPS_ENABLED=true
+          version: "latest"
+      - run: echo "${{ secrets.GCR_DEV_PUBLIC_B64_TOKEN }}" | base64 -d | docker login -u _json_key --password-stdin https://gcr.io
+      - run: earthly --ci --push +provider-package-all-platforms --IMAGE_REPOSITORY=gcr.io/spectro-dev-public/kairos-io
