@@ -41,10 +41,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		stages.GetPreKubeadmImportCoreK8sImageStage(clusterRootPath),
 	}
 
-	if cluster.ImportLocalImages {
-		preStage = append(preStage, stages.GetPreKubeadmImportLocalImageStage(cluster))
-	}
-
 	cluster.ClusterToken = utils.TransformToken(cluster.ClusterToken)
 
 	finalStages = append(finalStages, preStage...)
