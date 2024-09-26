@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/domain"
 
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 	"k8s.io/cli-runtime/pkg/printers"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"

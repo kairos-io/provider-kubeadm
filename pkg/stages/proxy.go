@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/domain"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/domain"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )

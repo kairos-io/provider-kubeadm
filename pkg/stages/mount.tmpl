@@ -1,0 +1,12 @@
+[Unit]
+Description={{.Name}} mount unit
+Before=local-fs.target {{.Before}}
+
+[Mount]
+What={{.Source}}
+Where={{.Target}}
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target

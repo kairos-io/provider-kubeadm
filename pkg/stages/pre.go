@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 )
 

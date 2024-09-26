@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/domain"
 )
 
 func GetClusterRootPath(cluster clusterplugin.Cluster) string {

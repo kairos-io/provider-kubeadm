@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/domain"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"github.com/kairos-io/kairos/provider-kubeadm/pkg/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
