@@ -2,13 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/stages"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"gopkg.in/yaml.v3"
 	kyaml "sigs.k8s.io/yaml"
 
+	"github.com/kairos-io/kairos-sdk/bus"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	"github.com/mudler/go-pluggable"
 	yip "github.com/mudler/yip/pkg/schema"
 	"github.com/sirupsen/logrus"
 )
@@ -18,9 +24,45 @@ func main() {
 		Provider: clusterProvider,
 	}
 
-	if err := plugin.Run(); err != nil {
+	if err := plugin.Run(
+		pluggable.FactoryPlugin{
+			EventType:     clusterplugin.EventClusterReset,
+			PluginHandler: handleClusterReset,
+		},
+	); err != nil {
 		logrus.Fatal(err)
 	}
+}
+
+func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
+	var payload bus.EventPayload
+	var config clusterplugin.Config
+	var response pluggable.EventResponse
+
+	// parse the boot payload
+	if err := json.Unmarshal([]byte(event.Data), &payload); err != nil {
+		response.Error = fmt.Sprintf("failed to parse boot event: %s", err.Error())
+		return response
+	}
+
+	// parse config from boot payload
+	if err := yaml.Unmarshal([]byte(payload.Config), &config); err != nil {
+		response.Error = fmt.Sprintf("failed to parse config from boot event: %s", err.Error())
+		return response
+	}
+
+	if config.Cluster == nil {
+		return response
+	}
+
+	clusterRootPath := utils.GetClusterRootPath(*config.Cluster)
+	cmd := exec.Command("/bin/sh", filepath.Join(clusterRootPath, "/opt/kubeadm/scripts", "kube-reset.sh"))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		response.Error = fmt.Sprintf("failed to reset cluster: %s", string(output))
+	}
+
+	return response
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
