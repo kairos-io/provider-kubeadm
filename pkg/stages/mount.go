@@ -34,6 +34,30 @@ func GetRootPathMountStage(rootPath string) yip.Stage {
 			Source: filepath.Join(rootPath, "etc/cni/net.d"),
 			Target: "/etc/cni/net.d",
 		},
+		{
+			Name:   "var-lib-spectro-containerd",
+			Before: domain.KubernetesServices,
+			Source: filepath.Join(rootPath, "var/lib/spectro/containerd"),
+			Target: "/var/lib/spectro/containerd",
+		},
+		{
+			Name:   "etc-default-kubelet",
+			Before: domain.KubernetesServices,
+			Source: filepath.Join(rootPath, "etc/default/kubelet"),
+			Target: "/etc/default/kubelet",
+		},
+		{
+			Name:   "etc-kubernetes",
+			Before: domain.KubernetesServices,
+			Source: filepath.Join(rootPath, "etc/kubernetes"),
+			Target: "/etc/kubernetes",
+		},
+		{
+			Name:   "var-lib-kubelet",
+			Before: domain.KubernetesServices,
+			Source: filepath.Join(rootPath, "var/lib/kubelet"),
+			Target: "/var/lib/kubelet",
+		},
 	}
 
 	stage := yip.Stage{
