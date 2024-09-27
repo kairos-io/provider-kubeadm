@@ -1,12 +1,10 @@
 module github.com/kairos-io/kairos/provider-kubeadm
 
-go 1.22.5
-
-toolchain go1.22.6
+go 1.23.1
 
 require (
-	github.com/kairos-io/kairos-sdk v0.4.1
-	github.com/mudler/yip v1.9.4
+	github.com/kairos-io/kairos-sdk v0.5.0
+	github.com/mudler/yip v1.10.0
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/apimachinery v0.27.1
 	k8s.io/cli-runtime v0.24.0
@@ -62,7 +60,7 @@ require (
 	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
