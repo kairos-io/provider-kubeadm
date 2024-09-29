@@ -33,10 +33,10 @@ umount -l /var/lib/kubelet
 rm -rf /var/lib/kubelet && rm -rf ${STYLUS_ROOT}/var/lib/kubelet
 umount -l /var/lib/spectro/containerd
 rm -rf /var/lib/spectro/containerd && rm -rf ${STYLUS_ROOT}/var/lib/spectro/containerd
-umount -l /opt/spectro/bin
-rm -rf /opt/spectro/bin && rm -rf ${STYLUS_ROOT}/opt/spectro/bin
-umount -l /opt/spectro/cni/bin
-rm -rf /opt/spectro/cni && rm -rf ${STYLUS_ROOT}/opt/spectro/cni
+umount -l /opt/bin
+rm -rf /opt/bin && rm -rf ${STYLUS_ROOT}/opt/bin
+umount -l /opt/cni/bin
+rm -rf /opt/cni && rm -rf ${STYLUS_ROOT}/opt/cni
 umount -l /etc/kubernetes
 rm -rf /etc/kubernetes && rm -rf ${STYLUS_ROOT}/etc/kubernetes
 
@@ -45,18 +45,11 @@ rm -rf ${STYLUS_ROOT}/opt/*init
 rm -rf ${STYLUS_ROOT}/opt/kube-images
 rm -rf ${STYLUS_ROOT}/opt/sentinel_kubeadmversion
 
-rm -rf /etc/systemd/system/etc-default-kubelet.mount
-rm -rf /etc/systemd/system/etc-cni-net.d.mount
-rm -rf /etc/systemd/system/opt-spectro-cni-bin.mount
-rm -rf /etc/systemd/system/opt-spectro-bin.mount
-rm -rf /etc/systemd/system/var-lib-spectro-containerd.mount
-rm -rf /etc/systemd/system/var-lib-kubelet.mount
-
-rm -rf /etc/systemd/system/spectro-kubelet.slice
-rm -rf /etc/systemd/system/spectro-containerd.slice
-rm -rf /etc/systemd/system/kubelet.service
-rm -rf /etc/systemd/system/containerd.service 2> /dev/null
-rm -rf /etc/systemd/system/spectro-containerd.service 2> /dev/null
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-kubelet.slice
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-containerd.slice
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/kubelet.service
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/containerd.service 2> /dev/null
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-containerd.service 2> /dev/null
 
 rm -rf /var/log/kube*.log
 rm -rf /var/log/apiserver
