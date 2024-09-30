@@ -14,11 +14,11 @@ systemctl daemon-reload
 systemctl enable kubelet && systemctl start kubelet
 
 if systemctl cat spectro-containerd >/dev/null 2<&1; then
-  systemctl enable spectro-containerd && systemctl start spectro-containerd
+  systemctl enable spectro-containerd && systemctl restart spectro-containerd
 fi
 
 if systemctl cat containerd >/dev/null 2<&1; then
-  systemctl enable containerd && systemctl start containerd
+  systemctl enable containerd && systemctl restart containerd
 fi
 
 if [ ! -f "$root_path"/opt/sentinel_kubeadmversion ]; then
