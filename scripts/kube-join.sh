@@ -26,7 +26,7 @@ do_kubeadm_reset() {
     kubeadm reset -f --cleanup-tmp-dir
   fi
   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
-  rm -rf "$root_path"/opt/spectro/cni/net.d
+  rm -rf "$root_path"/etc/cni/net.d
   systemctl daemon-reload
   if systemctl cat spectro-containerd >/dev/null 2<&1; then
     systemctl restart spectro-containerd

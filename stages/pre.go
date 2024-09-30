@@ -54,7 +54,7 @@ func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 		Name: "Run Load Kube Images",
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images"), rootPath),
+			fmt.Sprintf("/bin/sh %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images")),
 		},
 	}
 }
