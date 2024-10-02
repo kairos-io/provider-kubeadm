@@ -6,5 +6,9 @@ import (
 )
 
 func GetClusterRootPath(cluster clusterplugin.Cluster) string {
-	return cluster.ProviderOptions[domain.ClusterRootPath]
+	rootpath := cluster.ProviderOptions[domain.ClusterRootPath]
+	if rootpath == "" {
+		return "/"
+	}
+	return rootpath
 }
