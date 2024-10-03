@@ -68,17 +68,21 @@ func getKubeadmInitStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.
 		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(clusterRootPath, "opt/kubeadm.init")),
 	}
 
+	if cluster.ImportLocalImages {
+		initStage.Commands = getImportLocalImageStageCommands(cluster)
+	}
+
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
-		initStage.Commands = []string{
+		initStage.Commands = append(initStage.Commands,
 			fmt.Sprintf("bash %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-init.sh"), clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.init")),
-		}
+		)
 	} else {
-		initStage.Commands = []string{
+		initStage.Commands = append(initStage.Commands,
 			fmt.Sprintf("bash %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-init.sh"), clusterRootPath),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.init")),
-		}
+		)
 	}
 	return initStage
 }
