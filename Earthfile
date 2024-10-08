@@ -42,6 +42,10 @@ BUILD_GOLANG:
     ARG BIN
     ARG SRC
 
+    ARG VERSION=dev
+
+    ENV GO_LDFLAGS=" -X github.com/kairos-io/provider-kubeadm/version.Version=${VERSION} -w -s"
+
     IF $FIPS_ENABLED
         RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
         RUN assert-fips.sh ${BIN}
@@ -64,8 +68,10 @@ VERSION:
     SAVE ARTIFACT VERSION VERSION
 
 build-provider:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
     FROM +go-deps
-    DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go
+    DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go --VERSION=$VERSION
 
 build-provider-package:
     DO +VERSION

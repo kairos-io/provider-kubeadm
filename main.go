@@ -6,6 +6,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/kairos-io/kairos/provider-kubeadm/version"
+
+	"github.com/kairos-io/kairos/provider-kubeadm/log"
+
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/stages"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
@@ -20,6 +24,8 @@ import (
 )
 
 func main() {
+	log.InitLogger("/var/log/provider-kubeadm.log")
+	logrus.Infof("starting provider-kubeadm version %v", version.Version)
 	plugin := clusterplugin.ClusterPlugin{
 		Provider: clusterProvider,
 	}
