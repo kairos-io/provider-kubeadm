@@ -1,10 +1,12 @@
 package stages
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
@@ -26,7 +28,7 @@ func GetPreKubeadmProxyStage(kubeadmConfig domain.KubeadmConfig, cluster cluster
 				Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
 			},
 			{
-				Path:        filepath.Join("/etc/systemd/system/containerd.service.d", "http-proxy.conf"),
+				Path:        filepath.Join(fmt.Sprintf("/etc/systemd/system/%s.service.d", getContainerdServiceFolderName()), "http-proxy.conf"),
 				Permissions: 0400,
 				Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
 			},
@@ -84,4 +86,26 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
 	}
 	return strings.Join(proxy, "\n")
+}
+
+func getContainerdServiceFolderName() string {
+	ctx := context.Background()
+	systemdConnection, err := dbus.NewSystemConnectionContext(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	defer systemdConnection.Close()
+
+	status, err := systemdConnection.ListUnitsByNamesContext(ctx, []string{"spectro-containerd.service"})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, s := range status {
+		if s.LoadState == "loaded" {
+			return "spectro-containerd"
+		}
+	}
+	return "containerd"
 }
