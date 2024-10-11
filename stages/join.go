@@ -92,17 +92,21 @@ func getKubeadmJoinStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.
 		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 	}
 
+	if cluster.ImportLocalImages {
+		joinStage.Commands = getImportLocalImageStageCommands(cluster)
+	}
+
 	if utils.IsProxyConfigured(cluster.Env) {
 		proxy := cluster.Env
-		joinStage.Commands = []string{
+		joinStage.Commands = append(joinStage.Commands,
 			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
-		}
+		)
 	} else {
-		joinStage.Commands = []string{
+		joinStage.Commands = append(joinStage.Commands,
 			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
-		}
+		)
 	}
 	return joinStage
 }
