@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/kairos-io/kairos/provider-kubeadm/log"
+
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/stages"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
@@ -20,6 +22,8 @@ import (
 )
 
 func main() {
+	log.InitLogger("/var/log/provider-kubeadm.log")
+	logrus.Info("starting provider-kubeadm")
 	plugin := clusterplugin.ClusterPlugin{
 		Provider: clusterProvider,
 	}
@@ -32,21 +36,26 @@ func main() {
 	); err != nil {
 		logrus.Fatal(err)
 	}
+	logrus.Infof("completed provider-kubeadm")
 }
 
 func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
+	logrus.Info("handling cluster reset event")
+
 	var payload bus.EventPayload
 	var config clusterplugin.Config
 	var response pluggable.EventResponse
 
 	// parse the boot payload
 	if err := json.Unmarshal([]byte(event.Data), &payload); err != nil {
+		logrus.Error(fmt.Sprintf("failed to parse boot event: %s", err.Error()))
 		response.Error = fmt.Sprintf("failed to parse boot event: %s", err.Error())
 		return response
 	}
 
 	// parse config from boot payload
 	if err := yaml.Unmarshal([]byte(payload.Config), &config); err != nil {
+		logrus.Error(fmt.Sprintf("failed to parse config from boot event: %s", err.Error()))
 		response.Error = fmt.Sprintf("failed to parse config from boot event: %s", err.Error())
 		return response
 	}
@@ -59,6 +68,7 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 	cmd := exec.Command("/bin/sh", "-c", filepath.Join(clusterRootPath, "/opt/kubeadm/scripts", "kube-reset.sh"))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		logrus.Error(fmt.Sprintf("failed to reset cluster: %s", string(output)))
 		response.Error = fmt.Sprintf("failed to reset cluster: %s", string(output))
 	}
 
@@ -75,6 +85,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	}
 
 	clusterRootPath := utils.GetClusterRootPath(cluster)
+	logrus.Infof("clusterRootPath: %s", clusterRootPath)
 
 	preStage := []yip.Stage{
 		stages.GetPreKubeadmProxyStage(kubeadmConfig, cluster),
