@@ -42,6 +42,10 @@ BUILD_GOLANG:
     ARG BIN
     ARG SRC
 
+    ARG VERSION
+
+    ENV GO_LDFLAGS=" -X github.com/kairos-io/provider-kubeadm/version.Version=${VERSION} -w -s"
+
     IF $FIPS_ENABLED
         RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
         RUN assert-fips.sh ${BIN}
@@ -57,15 +61,20 @@ VERSION:
     FROM alpine
     RUN apk add git
 
-    COPY . ./
+    COPY .git/ .git
 
-    RUN echo $(git describe --exact-match --tags || echo "v0.0.0-$(git log --oneline -n 1 | cut -d" " -f1)") > VERSION
+    RUN echo $(git describe --exact-match --tags || echo "v0.0.0-$(git rev-parse --short=8 HEAD)") > VERSION
 
     SAVE ARTIFACT VERSION VERSION
 
 build-provider:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
+
     FROM +go-deps
-    DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go
+    DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go --VERSION=$VERSION
+
+    SAVE ARTIFACT agent-provider-kubeadm
 
 build-provider-package:
     DO +VERSION
