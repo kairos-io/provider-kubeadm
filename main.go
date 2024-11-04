@@ -77,21 +77,14 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	var finalStages []yip.Stage
-	var kubeadmConfig domain.KubeadmConfig
 
-	if cluster.Options != "" {
-		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
-		_ = json.Unmarshal(userOptions, &kubeadmConfig)
-	}
-
-	clusterRootPath := utils.GetClusterRootPath(cluster)
-	logrus.Infof("clusterRootPath: %s", clusterRootPath)
+	clusterCtx := CreateClusterContext(cluster)
 
 	preStage := []yip.Stage{
-		stages.GetPreKubeadmProxyStage(kubeadmConfig, cluster),
-		stages.GetPreKubeadmCommandStages(clusterRootPath),
+		stages.GetPreKubeadmProxyStage(clusterCtx, cluster),
+		stages.GetPreKubeadmCommandStages(clusterCtx.RootPath),
 		stages.GetPreKubeadmSwapOffDisableStage(),
-		stages.GetPreKubeadmImportCoreK8sImageStage(clusterRootPath),
+		stages.GetPreKubeadmImportCoreK8sImageStage(clusterCtx.RootPath),
 	}
 
 	if cluster.ImportLocalImages {
@@ -102,10 +95,15 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 	finalStages = append(finalStages, preStage...)
 
-	if cluster.Role == clusterplugin.RoleInit {
-		finalStages = append(finalStages, stages.GetInitYipStages(cluster, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
-	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+	cmpResult, err := utils.IsKubeadmVersionGreaterThan131()
+	if err != nil {
+		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
+	} else if cmpResult < 0 {
+		logrus.Info("kubeadm version is less than 1.31")
+		finalStages = getV1Beta3FinalStage(cluster, clusterCtx)
+	} else {
+		logrus.Info("kubeadm version is greater than or equal to 1.31")
+		finalStages = getV1Beta4FinalStage(cluster, clusterCtx)
 	}
 
 	cfg := yip.YipConfig{
@@ -116,4 +114,50 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	}
 
 	return cfg
+}
+
+func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext {
+	return &domain.ClusterContext{
+		RootPath:         utils.GetClusterRootPath(cluster),
+		NodeRole:         string(cluster.Role),
+		EnvConfig:        cluster.Env,
+		ControlPlaneHost: cluster.ControlPlaneHost,
+		ClusterToken:     cluster.ClusterToken,
+	}
+}
+
+func getV1Beta3FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.ClusterContext) []yip.Stage {
+	var finalStages []yip.Stage
+	var kubeadmConfig domain.KubeadmConfigBeta3
+
+	if cluster.Options != "" {
+		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
+		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+
+	if cluster.Role == clusterplugin.RoleInit {
+		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
+	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
+		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+	}
+
+	return finalStages
+}
+
+func getV1Beta4FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.ClusterContext) []yip.Stage {
+	var finalStages []yip.Stage
+	var kubeadmConfig domain.KubeadmConfigBeta4
+
+	if cluster.Options != "" {
+		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
+		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+
+	if cluster.Role == clusterplugin.RoleInit {
+		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
+	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
+		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+	}
+
+	return finalStages
 }

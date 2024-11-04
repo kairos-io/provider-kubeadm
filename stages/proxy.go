@@ -9,40 +9,41 @@ import (
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
-	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
 const (
 	envPrefix = "Environment="
 )
 
-func GetPreKubeadmProxyStage(kubeadmConfig domain.KubeadmConfig, cluster clusterplugin.Cluster) yip.Stage {
+func GetPreKubeadmProxyStage(clusterCtx *domain.ClusterContext, cluster clusterplugin.Cluster) yip.Stage {
 	return yip.Stage{
 		Name: "Set proxy env",
 		Files: []yip.File{
 			{
 				Path:        filepath.Join("/etc/default", "kubelet"),
 				Permissions: 0400,
-				Content:     kubeletProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
+				Content:     kubeletProxyEnv(clusterCtx),
 			},
 			{
 				Path:        filepath.Join(fmt.Sprintf("/run/systemd/system/%s.service.d", getContainerdServiceFolderName(cluster.ProviderOptions)), "http-proxy.conf"),
 				Permissions: 0400,
-				Content:     containerdProxyEnv(kubeadmConfig.ClusterConfiguration, cluster.Env),
+				Content:     containerdProxyEnv(clusterCtx),
 			},
 		},
 	}
 }
 
-func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
+func kubeletProxyEnv(clusterCtx *domain.ClusterContext) string {
 	var proxy []string
+
+	proxyMap := clusterCtx.EnvConfig
 
 	httpProxy := proxyMap["HTTP_PROXY"]
 	httpsProxy := proxyMap["HTTPS_PROXY"]
 	userNoProxy := proxyMap["NO_PROXY"]
 
 	if utils.IsProxyConfigured(proxyMap) {
-		noProxy := utils.GetDefaultNoProxy(clusterCfg)
+		noProxy := utils.GetDefaultNoProxy(clusterCtx)
 		if len(httpProxy) > 0 {
 			proxy = append(proxy, fmt.Sprintf("HTTP_PROXY=%s", httpProxy))
 		}
@@ -59,8 +60,10 @@ func kubeletProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[
 	return strings.Join(proxy, "\n")
 }
 
-func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
+func containerdProxyEnv(clusterCtx *domain.ClusterContext) string {
 	var proxy []string
+
+	proxyMap := clusterCtx.EnvConfig
 
 	httpProxy := proxyMap["HTTP_PROXY"]
 	httpsProxy := proxyMap["HTTPS_PROXY"]
@@ -68,7 +71,7 @@ func containerdProxyEnv(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap m
 
 	if utils.IsProxyConfigured(proxyMap) {
 		proxy = append(proxy, "[Service]")
-		noProxy := utils.GetDefaultNoProxy(clusterCfg)
+		noProxy := utils.GetDefaultNoProxy(clusterCtx)
 
 		if len(httpProxy) > 0 {
 			proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"HTTP_PROXY=%s"+"\"", httpProxy))

@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	kubeadmapiv4 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
+
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -16,16 +18,25 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func MutateClusterConfigDefaults(cluster clusterplugin.Cluster, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
-	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
-	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
+func MutateClusterConfigBeta3Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, clusterCtx.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost)
 
 	if clusterCfg.ImageRepository == "" {
 		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
 	}
 }
 
-func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
+func MutateClusterConfigBeta4Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv4.ClusterConfiguration) {
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, clusterCtx.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost)
+
+	if clusterCfg.ImageRepository == "" {
+		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
+	}
+}
+
+func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
 	kubeletCfg.APIVersion = "kubelet.config.k8s.io/v1beta1"
 	kubeletCfg.Kind = "KubeletConfiguration"
 
@@ -38,7 +49,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 	}
 
 	var clusterDNS string
-	dnsIP, err := constants.GetDNSIP(clusterCfg.Networking.ServiceSubnet)
+	dnsIP, err := constants.GetDNSIP(clusterCtx.ServiceCidr)
 	if err != nil {
 		clusterDNS = kubeadmapiv3.DefaultClusterDNSIP
 	} else {
