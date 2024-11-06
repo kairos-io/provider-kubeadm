@@ -44,7 +44,7 @@ BUILD_GOLANG:
 
     ARG VERSION
 
-    ENV GO_LDFLAGS=" -X github.com/kairos-io/provider-kubeadm/version.Version=${VERSION} -w -s"
+    ENV GO_LDFLAGS=" -X github.com/kairos-io/kairos/provider-kubeadm/version.Version=${VERSION} -w -s"
 
     IF $FIPS_ENABLED
         RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
