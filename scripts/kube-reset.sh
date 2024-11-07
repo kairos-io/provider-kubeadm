@@ -41,7 +41,9 @@ umount -l /etc/kubernetes
 rm -rf /etc/kubernetes && rm -rf ${STYLUS_ROOT}/etc/kubernetes
 
 rm -rf ${STYLUS_ROOT}/opt/kubeadm
+rm -rf ${STYLUS_ROOT}/opt/containerd
 rm -rf ${STYLUS_ROOT}/opt/*init
+rm -rf ${STYLUS_ROOT}/opt/*join
 rm -rf ${STYLUS_ROOT}/opt/kube-images
 rm -rf ${STYLUS_ROOT}/opt/sentinel_kubeadmversion
 
