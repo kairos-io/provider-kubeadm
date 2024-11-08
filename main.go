@@ -98,10 +98,10 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
 	} else if cmpResult < 0 {
 		logrus.Info("kubeadm version is less than 1.31")
-		finalStages = getV1Beta3FinalStage(cluster, clusterCtx)
+		finalStages = append(finalStages, getV1Beta3FinalStage(cluster, clusterCtx)...)
 	} else {
 		logrus.Info("kubeadm version is greater than or equal to 1.31")
-		finalStages = getV1Beta4FinalStage(cluster, clusterCtx)
+		finalStages = append(finalStages, getV1Beta4FinalStage(cluster, clusterCtx)...)
 	}
 
 	cfg := yip.YipConfig{
