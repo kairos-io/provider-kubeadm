@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -15,7 +14,7 @@ const (
 	envPrefix = "Environment="
 )
 
-func GetPreKubeadmProxyStage(clusterCtx *domain.ClusterContext, cluster clusterplugin.Cluster) yip.Stage {
+func GetPreKubeadmProxyStage(clusterCtx *domain.ClusterContext) yip.Stage {
 	return yip.Stage{
 		Name: "Set proxy env",
 		Files: []yip.File{
@@ -25,7 +24,7 @@ func GetPreKubeadmProxyStage(clusterCtx *domain.ClusterContext, cluster clusterp
 				Content:     kubeletProxyEnv(clusterCtx),
 			},
 			{
-				Path:        filepath.Join(fmt.Sprintf("/run/systemd/system/%s.service.d", getContainerdServiceFolderName(cluster.ProviderOptions)), "http-proxy.conf"),
+				Path:        filepath.Join(fmt.Sprintf("/run/systemd/system/%s.service.d", clusterCtx.ContainerdServiceFolderName), "http-proxy.conf"),
 				Permissions: 0400,
 				Content:     containerdProxyEnv(clusterCtx),
 			},
@@ -87,11 +86,4 @@ func containerdProxyEnv(clusterCtx *domain.ClusterContext) string {
 		proxy = append(proxy, fmt.Sprintf(envPrefix+"\""+"NO_PROXY=%s"+"\"", noProxy))
 	}
 	return strings.Join(proxy, "\n")
-}
-
-func getContainerdServiceFolderName(options map[string]string) string {
-	if _, ok := options["spectro-containerd-service-name"]; ok {
-		return "spectro-containerd"
-	}
-	return "containerd"
 }
