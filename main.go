@@ -91,8 +91,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		preStage = append(preStage, stages.GetPreKubeadmImportLocalImageStage(cluster))
 	}
 
-	cluster.ClusterToken = utils.TransformToken(cluster.ClusterToken)
-
 	finalStages = append(finalStages, preStage...)
 
 	cmpResult, err := utils.IsKubeadmVersionGreaterThan131()
@@ -122,7 +120,7 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		NodeRole:         string(cluster.Role),
 		EnvConfig:        cluster.Env,
 		ControlPlaneHost: cluster.ControlPlaneHost,
-		ClusterToken:     cluster.ClusterToken,
+		ClusterToken:     utils.TransformToken(cluster.ClusterToken),
 	}
 }
 
