@@ -136,9 +136,9 @@ func getV1Beta3FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.Clus
 	}
 
 	if cluster.Role == clusterplugin.RoleInit {
-		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
 	}
 
 	return finalStages
@@ -154,9 +154,9 @@ func getV1Beta4FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.Clus
 	}
 
 	if cluster.Role == clusterplugin.RoleInit {
-		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
 	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
-		finalStages = append(finalStages, stages.GetJoinYipStages(cluster, kubeadmConfig.ClusterConfiguration, kubeadmConfig.InitConfiguration, kubeadmConfig.JoinConfiguration, kubeadmConfig.KubeletConfiguration)...)
+		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
 	}
 
 	return finalStages

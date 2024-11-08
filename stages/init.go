@@ -34,38 +34,38 @@ const (
 	configurationPath = "opt/kubeadm"
 )
 
-func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, initCfg kubeadmapiv3.InitConfiguration, clusterCfg kubeadmapiv3.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	utils.MutateClusterConfigBeta3Defaults(clusterCtx, &clusterCfg)
-	utils.MutateKubeletDefaults(clusterCtx, &kubeletCfg)
+func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta3) []yip.Stage {
+	utils.MutateClusterConfigBeta3Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
+	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
-	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&clusterCfg, &initCfg.NodeRegistration, clusterCtx.NodeRole)
-	clusterCtx.CertSansRevision = utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
 	return []yip.Stage{
-		getKubeadmInitConfigStage(getInitNodeConfigurationBeta3(clusterCtx, initCfg, clusterCfg, kubeletCfg), clusterCtx.RootPath),
+		getKubeadmInitConfigStage(getInitNodeConfigurationBeta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
 		getKubeadmInitStage(clusterCtx),
 		getKubeadmPostInitStage(clusterCtx.RootPath),
 		getKubeadmInitUpgradeStage(clusterCtx),
-		getKubeadmInitCreateClusterConfigStage(&clusterCfg, &initCfg, clusterCtx.RootPath),
-		getKubeadmInitCreateKubeletConfigStage(kubeletCfg, clusterCtx.RootPath),
+		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
+		getKubeadmInitCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
 }
 
-func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, initCfg kubeadmapiv4.InitConfiguration, clusterCfg kubeadmapiv4.ClusterConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &clusterCfg)
-	utils.MutateKubeletDefaults(clusterCtx, &kubeletCfg)
+func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta4) []yip.Stage {
+	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
+	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
-	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&clusterCfg, &initCfg.NodeRegistration, clusterCtx.NodeRole)
-	clusterCtx.CertSansRevision = utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
 	return []yip.Stage{
-		getKubeadmInitConfigStage(getInitNodeConfigurationBeta4(clusterCtx, initCfg, clusterCfg, kubeletCfg), clusterCtx.RootPath),
+		getKubeadmInitConfigStage(getInitNodeConfigurationBeta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
 		getKubeadmInitStage(clusterCtx),
 		getKubeadmPostInitStage(clusterCtx.RootPath),
 		getKubeadmInitUpgradeStage(clusterCtx),
-		getKubeadmInitCreateClusterConfigStage(&clusterCfg, &initCfg, clusterCtx.RootPath),
-		getKubeadmInitCreateKubeletConfigStage(kubeletCfg, clusterCtx.RootPath),
+		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
+		getKubeadmInitCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
 }
