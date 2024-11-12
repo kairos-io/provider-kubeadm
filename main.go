@@ -81,7 +81,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 	clusterCtx := CreateClusterContext(cluster)
 
 	preStage := []yip.Stage{
-		stages.GetPreKubeadmProxyStage(clusterCtx, cluster),
+		stages.GetPreKubeadmProxyStage(clusterCtx),
 		stages.GetPreKubeadmCommandStages(clusterCtx.RootPath),
 		stages.GetPreKubeadmSwapOffDisableStage(),
 		stages.GetPreKubeadmImportCoreK8sImageStage(clusterCtx.RootPath),
@@ -98,10 +98,10 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
 	} else if cmpResult < 0 {
 		logrus.Info("kubeadm version is less than 1.31")
-		finalStages = append(finalStages, getV1Beta3FinalStage(cluster, clusterCtx)...)
+		finalStages = append(finalStages, getV1Beta3FinalStage(clusterCtx)...)
 	} else {
 		logrus.Info("kubeadm version is greater than or equal to 1.31")
-		finalStages = append(finalStages, getV1Beta4FinalStage(cluster, clusterCtx)...)
+		finalStages = append(finalStages, getV1Beta4FinalStage(clusterCtx)...)
 	}
 
 	cfg := yip.YipConfig{
@@ -116,46 +116,55 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext {
 	return &domain.ClusterContext{
-		RootPath:         utils.GetClusterRootPath(cluster),
-		NodeRole:         string(cluster.Role),
-		EnvConfig:        cluster.Env,
-		ControlPlaneHost: cluster.ControlPlaneHost,
-		ClusterToken:     utils.TransformToken(cluster.ClusterToken),
+		RootPath:                    utils.GetClusterRootPath(cluster),
+		NodeRole:                    string(cluster.Role),
+		EnvConfig:                   cluster.Env,
+		ControlPlaneHost:            cluster.ControlPlaneHost,
+		ClusterToken:                utils.TransformToken(cluster.ClusterToken),
+		UserOptions:                 cluster.Options,
+		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
 	}
 }
 
-func getV1Beta3FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.ClusterContext) []yip.Stage {
+func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var finalStages []yip.Stage
 	var kubeadmConfig domain.KubeadmConfigBeta3
 
-	if cluster.Options != "" {
-		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
+	if clusterCtx.UserOptions != "" {
+		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
-	if cluster.Role == clusterplugin.RoleInit {
+	if clusterCtx.NodeRole == clusterplugin.RoleInit {
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
-	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
+	} else if (clusterCtx.NodeRole == clusterplugin.RoleControlPlane) || (clusterCtx.NodeRole == clusterplugin.RoleWorker) {
 		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
 	}
 
 	return finalStages
 }
 
-func getV1Beta4FinalStage(cluster clusterplugin.Cluster, clusterCtx *domain.ClusterContext) []yip.Stage {
+func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	var finalStages []yip.Stage
 	var kubeadmConfig domain.KubeadmConfigBeta4
 
-	if cluster.Options != "" {
-		userOptions, _ := kyaml.YAMLToJSON([]byte(cluster.Options))
+	if clusterCtx.UserOptions != "" {
+		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
-	if cluster.Role == clusterplugin.RoleInit {
+	if clusterCtx.NodeRole == clusterplugin.RoleInit {
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
-	} else if (cluster.Role == clusterplugin.RoleControlPlane) || (cluster.Role == clusterplugin.RoleWorker) {
+	} else if (clusterCtx.NodeRole == clusterplugin.RoleControlPlane) || (clusterCtx.NodeRole == clusterplugin.RoleWorker) {
 		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
 	}
 
 	return finalStages
+}
+
+func getContainerdServiceFolderName(options map[string]string) string {
+	if _, ok := options["spectro-containerd-service-name"]; ok {
+		return "spectro-containerd"
+	}
+	return "containerd"
 }
