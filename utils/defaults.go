@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	kubeadmapiv4 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
 
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
@@ -15,7 +17,6 @@ import (
 
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/utils/pointer"
 )
 
 func MutateClusterConfigBeta3Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
@@ -70,7 +71,7 @@ func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubele
 	}
 
 	if kubeletCfg.Authentication.Anonymous.Enabled == nil {
-		kubeletCfg.Authentication.Anonymous.Enabled = pointer.Bool(false)
+		kubeletCfg.Authentication.Anonymous.Enabled = ptr.To(false)
 	}
 
 	if kubeletCfg.Authorization.Mode == "" {
@@ -79,7 +80,7 @@ func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubele
 
 	// Let clients using other authentication methods like ServiceAccount tokens also access the kubelet API
 	if kubeletCfg.Authentication.Webhook.Enabled == nil {
-		kubeletCfg.Authentication.Webhook.Enabled = pointer.Bool(true)
+		kubeletCfg.Authentication.Webhook.Enabled = ptr.To(true)
 	}
 
 	// Serve a /healthz webserver on localhost:10248 that kubeadm can talk to
@@ -88,7 +89,7 @@ func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubele
 	}
 
 	if kubeletCfg.HealthzPort == nil {
-		kubeletCfg.HealthzPort = pointer.Int32(constants.KubeletHealthzPort)
+		kubeletCfg.HealthzPort = ptr.To(int32(constants.KubeletHealthzPort))
 	}
 
 	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
@@ -111,7 +112,7 @@ func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubele
 
 	ok, _ := isServiceActive("systemd-resolved")
 	if ok && kubeletCfg.ResolverConfig == nil {
-		kubeletCfg.ResolverConfig = pointer.String("/run/systemd/resolve/resolv.conf")
+		kubeletCfg.ResolverConfig = ptr.To("/run/systemd/resolve/resolv.conf")
 	}
 }
 
