@@ -41,9 +41,6 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
-	clusterCtx.ServiceCidr = kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet
-	clusterCtx.ClusterCidr = kubeadmConfig.ClusterConfiguration.Networking.PodSubnet
-
 	return []yip.Stage{
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
 		getKubeadmInitStage(clusterCtx),
@@ -56,14 +53,14 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 }
 
 func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta4) []yip.Stage {
+	clusterCtx.ServiceCidr = kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet
+	clusterCtx.ClusterCidr = kubeadmConfig.ClusterConfiguration.Networking.PodSubnet
+
 	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
 	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
-
-	clusterCtx.ServiceCidr = kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet
-	clusterCtx.ClusterCidr = kubeadmConfig.ClusterConfiguration.Networking.PodSubnet
 
 	return []yip.Stage{
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),

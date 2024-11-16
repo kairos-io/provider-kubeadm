@@ -80,19 +80,6 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 	clusterCtx := CreateClusterContext(cluster)
 
-	preStage := []yip.Stage{
-		stages.GetPreKubeadmProxyStage(clusterCtx),
-		stages.GetPreKubeadmCommandStages(clusterCtx.RootPath),
-		stages.GetPreKubeadmSwapOffDisableStage(),
-		stages.GetPreKubeadmImportCoreK8sImageStage(clusterCtx.RootPath),
-	}
-
-	if cluster.ImportLocalImages {
-		preStage = append(preStage, stages.GetPreKubeadmImportLocalImageStage(cluster))
-	}
-
-	finalStages = append(finalStages, preStage...)
-
 	cmpResult, err := utils.IsKubeadmVersionGreaterThan131()
 	if err != nil {
 		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
@@ -115,7 +102,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 }
 
 func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext {
-	return &domain.ClusterContext{
+	clusterContext := &domain.ClusterContext{
 		RootPath:                    utils.GetClusterRootPath(cluster),
 		NodeRole:                    string(cluster.Role),
 		EnvConfig:                   cluster.Env,
@@ -124,6 +111,14 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		UserOptions:                 cluster.Options,
 		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
 	}
+
+	if cluster.LocalImagesPath == "" {
+		clusterContext.LocalImagesPath = filepath.Join(clusterContext.RootPath, "opt/content/images")
+	} else {
+		clusterContext.LocalImagesPath = cluster.LocalImagesPath
+	}
+
+	return clusterContext
 }
 
 func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
@@ -134,6 +129,11 @@ func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
+
+	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
+
+	// pre stages
+	finalStages = append(finalStages, getKubeadmPreStages(clusterCtx)...)
 
 	if clusterCtx.NodeRole == clusterplugin.RoleInit {
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
@@ -153,6 +153,11 @@ func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
 	}
 
+	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
+
+	// pre stages
+	finalStages = append(finalStages, getKubeadmPreStages(clusterCtx)...)
+
 	if clusterCtx.NodeRole == clusterplugin.RoleInit {
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
 	} else if (clusterCtx.NodeRole == clusterplugin.RoleControlPlane) || (clusterCtx.NodeRole == clusterplugin.RoleWorker) {
@@ -162,9 +167,24 @@ func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	return finalStages
 }
 
+func getKubeadmPreStages(clusterCtx *domain.ClusterContext) []yip.Stage {
+	return []yip.Stage{
+		stages.GetPreKubeadmProxyStage(clusterCtx),
+		stages.GetPreKubeadmCommandStages(clusterCtx.RootPath),
+		stages.GetPreKubeadmSwapOffDisableStage(),
+		stages.GetPreKubeadmImportCoreK8sImageStage(clusterCtx.RootPath),
+		stages.GetPreKubeadmImportLocalImageStage(clusterCtx),
+	}
+}
+
 func getContainerdServiceFolderName(options map[string]string) string {
 	if _, ok := options["spectro-containerd-service-name"]; ok {
 		return "spectro-containerd"
 	}
 	return "containerd"
+}
+
+func setClusterSubnetCtx(clusterCtx *domain.ClusterContext, serviceSubnet, podSubnet string) {
+	clusterCtx.ServiceCidr = serviceSubnet
+	clusterCtx.ClusterCidr = podSubnet
 }
