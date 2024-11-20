@@ -38,7 +38,7 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	utils.MutateClusterConfigBeta3Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
 	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
-	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
 	return []yip.Stage{
@@ -59,7 +59,7 @@ func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
 	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
-	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
 	return []yip.Stage{

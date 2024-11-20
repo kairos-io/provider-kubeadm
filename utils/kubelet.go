@@ -26,20 +26,7 @@ type kubeletFlagsOpts struct {
 	registerTaintsUsingFlags bool
 }
 
-var k8sVersionToPauseImage = map[string]string{
-	"v1.22.15": "3.5",
-	"v1.23.12": "3.6",
-	"v1.24.6":  "3.7",
-	"v1.25.2":  "3.8",
-	"v1.25.9":  "3.8",
-	"v1.25.13": "3.8",
-	"v1.26.4":  "3.8",
-	"v1.26.8":  "3.8",
-	"v1.27.2":  "3.9",
-	"v1.27.5":  "3.9",
-}
-
-func RegenerateKubeletKubeadmArgsUsingBeta3Config(clusterCfg *kubeadmapiv3.ClusterConfiguration, nodeReg *kubeadmapiv3.NodeRegistrationOptions, nodeRole string) string {
+func RegenerateKubeletKubeadmArgsUsingBeta3Config(nodeReg *kubeadmapiv3.NodeRegistrationOptions, nodeRole string) string {
 	var registerTaintsUsingFlags bool
 	if nodeRole == "worker" {
 		registerTaintsUsingFlags = true
@@ -47,7 +34,6 @@ func RegenerateKubeletKubeadmArgsUsingBeta3Config(clusterCfg *kubeadmapiv3.Clust
 
 	flagOpts := kubeletFlagsOpts{
 		name:                     nodeReg.Name,
-		pauseImage:               fmt.Sprintf("%s/%s:%s", clusterCfg.ImageRepository, "pause", k8sVersionToPauseImage[clusterCfg.KubernetesVersion]),
 		criSocket:                nodeReg.CRISocket,
 		taints:                   nodeReg.Taints,
 		kubeletExtraArgs:         nodeReg.KubeletExtraArgs,
@@ -58,22 +44,23 @@ func RegenerateKubeletKubeadmArgsUsingBeta3Config(clusterCfg *kubeadmapiv3.Clust
 	return fmt.Sprintf("%s=%q", constants.KubeletEnvFileVariableName, strings.Join(argList, " "))
 }
 
-func RegenerateKubeletKubeadmArgsUsingBeta4Config(clusterCfg *kubeadmapiv4.ClusterConfiguration, nodeReg *kubeadmapiv4.NodeRegistrationOptions, nodeRole string) string {
+func RegenerateKubeletKubeadmArgsUsingBeta4Config(nodeReg *kubeadmapiv4.NodeRegistrationOptions, nodeRole string) string {
 	var registerTaintsUsingFlags bool
 	if nodeRole == "worker" {
 		registerTaintsUsingFlags = true
 	}
 
+	extraArgs := convertFromArgs(nodeReg.KubeletExtraArgs)
+
 	flagOpts := kubeletFlagsOpts{
 		name:                     nodeReg.Name,
-		pauseImage:               fmt.Sprintf("%s/%s:%s", clusterCfg.ImageRepository, "pause", k8sVersionToPauseImage[clusterCfg.KubernetesVersion]),
 		criSocket:                nodeReg.CRISocket,
 		taints:                   nodeReg.Taints,
-		kubeletExtraArgs:         convertFromArgs(nodeReg.KubeletExtraArgs),
+		kubeletExtraArgs:         extraArgs,
 		registerTaintsUsingFlags: registerTaintsUsingFlags,
 	}
 	stringMap := buildKubeletArgMapCommon(flagOpts)
-	argList := buildArgumentListFromMap(stringMap, convertFromArgs(nodeReg.KubeletExtraArgs))
+	argList := buildArgumentListFromMap(stringMap, extraArgs)
 	return fmt.Sprintf("%s=%q", constants.KubeletEnvFileVariableName, strings.Join(argList, " "))
 }
 

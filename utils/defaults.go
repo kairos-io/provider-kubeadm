@@ -33,7 +33,7 @@ func MutateClusterConfigBeta4Defaults(clusterCtx *domain.ClusterContext, cluster
 	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost)
 
 	if clusterCfg.ImageRepository == "" {
-		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
+		clusterCfg.ImageRepository = kubeadmapiv4.DefaultImageRepository
 	}
 }
 
