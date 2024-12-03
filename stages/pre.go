@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+
 	yip "github.com/mudler/yip/pkg/schema"
 )
 
@@ -32,20 +32,17 @@ func GetPreKubeadmSwapOffDisableStage() yip.Stage {
 	}
 }
 
-func GetPreKubeadmImportLocalImageStage(cluster clusterplugin.Cluster) yip.Stage {
-	clusterRootPath := utils.GetClusterRootPath(cluster)
-
-	if cluster.LocalImagesPath == "" {
-		cluster.LocalImagesPath = filepath.Join(clusterRootPath, "opt/content/images")
-	}
+func GetPreKubeadmImportLocalImageStage(clusterCtx *domain.ClusterContext) yip.Stage {
+	clusterRootPath := clusterCtx.RootPath
+	localImagesPath := clusterCtx.LocalImagesPath
 
 	return yip.Stage{
 		Name: "Run Import Local Images",
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(clusterRootPath, helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(clusterRootPath, helperScriptPath, "import.sh"), cluster.LocalImagesPath),
+			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(clusterRootPath, helperScriptPath, "import.sh"), localImagesPath),
 		},
-		If: fmt.Sprintf("[ -d %s ]", cluster.LocalImagesPath),
+		If: fmt.Sprintf("[ -d %s ]", localImagesPath),
 	}
 }
 

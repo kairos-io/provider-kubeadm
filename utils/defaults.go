@@ -5,7 +5,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	"k8s.io/utils/ptr"
+
+	kubeadmapiv4 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
+
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -13,19 +17,27 @@ import (
 
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/utils/pointer"
 )
 
-func MutateClusterConfigDefaults(cluster clusterplugin.Cluster, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
-	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, cluster.ControlPlaneHost)
-	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", cluster.ControlPlaneHost)
+func MutateClusterConfigBeta3Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, clusterCtx.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost)
 
 	if clusterCfg.ImageRepository == "" {
 		clusterCfg.ImageRepository = kubeadmapiv3.DefaultImageRepository
 	}
 }
 
-func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
+func MutateClusterConfigBeta4Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv4.ClusterConfiguration) {
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, clusterCtx.ControlPlaneHost)
+	clusterCfg.ControlPlaneEndpoint = fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost)
+
+	if clusterCfg.ImageRepository == "" {
+		clusterCfg.ImageRepository = kubeadmapiv4.DefaultImageRepository
+	}
+}
+
+func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubeletv1beta1.KubeletConfiguration) {
 	kubeletCfg.APIVersion = "kubelet.config.k8s.io/v1beta1"
 	kubeletCfg.Kind = "KubeletConfiguration"
 
@@ -38,7 +50,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 	}
 
 	var clusterDNS string
-	dnsIP, err := constants.GetDNSIP(clusterCfg.Networking.ServiceSubnet)
+	dnsIP, err := constants.GetDNSIP(clusterCtx.ServiceCidr)
 	if err != nil {
 		clusterDNS = kubeadmapiv3.DefaultClusterDNSIP
 	} else {
@@ -59,7 +71,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 	}
 
 	if kubeletCfg.Authentication.Anonymous.Enabled == nil {
-		kubeletCfg.Authentication.Anonymous.Enabled = pointer.Bool(false)
+		kubeletCfg.Authentication.Anonymous.Enabled = ptr.To(false)
 	}
 
 	if kubeletCfg.Authorization.Mode == "" {
@@ -68,7 +80,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 
 	// Let clients using other authentication methods like ServiceAccount tokens also access the kubelet API
 	if kubeletCfg.Authentication.Webhook.Enabled == nil {
-		kubeletCfg.Authentication.Webhook.Enabled = pointer.Bool(true)
+		kubeletCfg.Authentication.Webhook.Enabled = ptr.To(true)
 	}
 
 	// Serve a /healthz webserver on localhost:10248 that kubeadm can talk to
@@ -77,7 +89,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 	}
 
 	if kubeletCfg.HealthzPort == nil {
-		kubeletCfg.HealthzPort = pointer.Int32(constants.KubeletHealthzPort)
+		kubeletCfg.HealthzPort = ptr.To(int32(constants.KubeletHealthzPort))
 	}
 
 	if kubeletCfg.ShutdownGracePeriod.Duration == 0 {
@@ -100,7 +112,7 @@ func MutateKubeletDefaults(clusterCfg *kubeadmapiv3.ClusterConfiguration, kubele
 
 	ok, _ := isServiceActive("systemd-resolved")
 	if ok && kubeletCfg.ResolverConfig == nil {
-		kubeletCfg.ResolverConfig = pointer.String("/run/systemd/resolve/resolv.conf")
+		kubeletCfg.ResolverConfig = ptr.To("/run/systemd/resolve/resolv.conf")
 	}
 }
 

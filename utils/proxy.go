@@ -1,14 +1,16 @@
 package utils
 
-import kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+import (
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+)
 
 const (
 	k8sNoProxy = ".svc,.svc.cluster,.svc.cluster.local"
 )
 
-func GetNoProxyConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, proxyMap map[string]string) string {
-	defaultNoProxy := GetDefaultNoProxy(clusterCfg)
-	userNoProxy := proxyMap["NO_PROXY"]
+func GetNoProxyConfig(clusterCtx *domain.ClusterContext) string {
+	defaultNoProxy := GetDefaultNoProxy(clusterCtx)
+	userNoProxy := clusterCtx.EnvConfig["NO_PROXY"]
 	if len(userNoProxy) > 0 {
 		return defaultNoProxy + "," + userNoProxy
 	}
@@ -19,15 +21,16 @@ func IsProxyConfigured(proxyMap map[string]string) bool {
 	return len(proxyMap["HTTP_PROXY"]) > 0 || len(proxyMap["HTTPS_PROXY"]) > 0
 }
 
-func GetDefaultNoProxy(clusterCfg kubeadmapiv3.ClusterConfiguration) string {
+func GetDefaultNoProxy(clusterCtx *domain.ClusterContext) string {
 	var noProxy string
 
-	clusterCidr := clusterCfg.Networking.PodSubnet
-	serviceCidr := clusterCfg.Networking.ServiceSubnet
+	clusterCidr := clusterCtx.ClusterCidr
+	serviceCidr := clusterCtx.ServiceCidr
 
 	if len(clusterCidr) > 0 {
 		noProxy = clusterCidr
 	}
+
 	if len(serviceCidr) > 0 {
 		noProxy = noProxy + "," + serviceCidr
 	}
