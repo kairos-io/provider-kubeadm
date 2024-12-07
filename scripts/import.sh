@@ -2,8 +2,12 @@
 
 CONTENT_PATH=$1
 
+if [ ! -d "$CONTENT_PATH" ]; then
+  exit 0
+fi
+
 # find all tar files recursively
-for tarfile in $(find $CONTENT_PATH -name "*.tar" -type f)
+for tarfile in $(find "$CONTENT_PATH" -name "*.tar" -type f)
 do
   # try to import the tar file into containerd up to ten times
   for i in {1..10}
