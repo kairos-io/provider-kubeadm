@@ -2,9 +2,9 @@
 
 set -x
 
-export PATH="$PATH:$root_path/usr/bin"
-
 root_path=$1
+
+export PATH="$PATH:$root_path/usr/bin"
 
 sysctl --system
 modprobe overlay
