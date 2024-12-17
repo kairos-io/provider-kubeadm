@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
+	kubeadmapiv4 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
+
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -16,39 +20,98 @@ import (
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
-func GetJoinYipStages(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, kubeletCfg kubeletv1beta1.KubeletConfiguration) []yip.Stage {
-	utils.MutateClusterConfigDefaults(cluster, &clusterCfg)
-	utils.MutateKubeletDefaults(&clusterCfg, &kubeletCfg)
-	clusterRootPath := utils.GetClusterRootPath(cluster)
+func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta3) []yip.Stage {
+	utils.MutateClusterConfigBeta3Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
+	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
+
 	joinStg := []yip.Stage{
-		getKubeadmJoinConfigStage(getJoinNodeConfiguration(cluster, joinCfg), clusterRootPath),
-		getKubeadmJoinStage(cluster, clusterCfg),
-		getKubeadmJoinUpgradeStage(cluster, clusterCfg),
+		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta3(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
+		getKubeadmJoinStage(clusterCtx),
+		getKubeadmJoinUpgradeStage(clusterCtx),
 	}
 
-	if cluster.Role != clusterplugin.RoleWorker {
-		joinStg = append(joinStg, getKubeadmJoinCreateClusterConfigStage(clusterCfg, initCfg, joinCfg, clusterRootPath), getKubeadmJoinCreateKubeletConfigStage(kubeletCfg, clusterRootPath))
+	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
+		joinStg = append(joinStg,
+			getKubeadmJoinCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.JoinConfiguration, clusterCtx.RootPath),
+			getKubeadmJoinCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
 	}
 
-	return append(joinStg, getKubeadmJoinReconfigureStage(cluster, clusterCfg, joinCfg))
+	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
 }
 
-func getJoinNodeConfiguration(cluster clusterplugin.Cluster, joinCfg kubeadmapiv3.JoinConfiguration) string {
+func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta4) []yip.Stage {
+	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
+	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
+
+	joinStg := []yip.Stage{
+		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta4(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
+		getKubeadmJoinStage(clusterCtx),
+		getKubeadmJoinUpgradeStage(clusterCtx),
+	}
+
+	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
+		joinStg = append(joinStg,
+			getKubeadmJoinCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.JoinConfiguration, clusterCtx.RootPath),
+			getKubeadmJoinCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
+	}
+
+	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
+}
+
+func getJoinNodeConfigurationBeta3(clusterCtx *domain.ClusterContext, joinCfg kubeadmapiv3.JoinConfiguration) string {
 	if joinCfg.Discovery.BootstrapToken == nil {
 		joinCfg.Discovery.BootstrapToken = &kubeadmapiv3.BootstrapTokenDiscovery{
-			Token:                    cluster.ClusterToken,
-			APIServerEndpoint:        fmt.Sprintf("%s:6443", cluster.ControlPlaneHost),
+			Token:                    clusterCtx.ClusterToken,
+			APIServerEndpoint:        fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost),
 			UnsafeSkipCAVerification: true,
 		}
 	}
 
-	if cluster.Role == clusterplugin.RoleControlPlane {
+	if clusterCtx.NodeRole == clusterplugin.RoleControlPlane {
 		if joinCfg.ControlPlane == nil {
 			joinCfg.ControlPlane = &kubeadmapiv3.JoinControlPlane{}
 		}
-		joinCfg.ControlPlane.CertificateKey = utils.GetCertificateKey(cluster.ClusterToken)
+		joinCfg.ControlPlane.CertificateKey = utils.GetCertificateKey(clusterCtx.ClusterToken)
 
 		var apiEndpoint kubeadmapiv3.APIEndpoint
+
+		if joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress == "" {
+			apiEndpoint.AdvertiseAddress = domain.DefaultAPIAdvertiseAddress
+		} else {
+			apiEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
+		}
+
+		if joinCfg.ControlPlane.LocalAPIEndpoint.BindPort != 0 {
+			apiEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+		}
+
+		joinCfg.ControlPlane.LocalAPIEndpoint = apiEndpoint
+	}
+
+	joinPrinter := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
+
+	out := bytes.NewBuffer([]byte{})
+	_ = joinPrinter.PrintObj(&joinCfg, out)
+
+	return out.String()
+}
+
+func getJoinNodeConfigurationBeta4(clusterCtx *domain.ClusterContext, joinCfg kubeadmapiv4.JoinConfiguration) string {
+	if joinCfg.Discovery.BootstrapToken == nil {
+		joinCfg.Discovery.BootstrapToken = &kubeadmapiv4.BootstrapTokenDiscovery{
+			Token:                    clusterCtx.ClusterToken,
+			APIServerEndpoint:        fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost),
+			UnsafeSkipCAVerification: true,
+		}
+	}
+
+	if clusterCtx.NodeRole == clusterplugin.RoleControlPlane {
+		if joinCfg.ControlPlane == nil {
+			joinCfg.ControlPlane = &kubeadmapiv4.JoinControlPlane{}
+		}
+		joinCfg.ControlPlane.CertificateKey = utils.GetCertificateKey(clusterCtx.ClusterToken)
+
+		var apiEndpoint kubeadmapiv4.APIEndpoint
 
 		if joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress == "" {
 			apiEndpoint.AdvertiseAddress = domain.DefaultAPIAdvertiseAddress
@@ -84,109 +147,90 @@ func getKubeadmJoinConfigStage(kubeadmCfg, rootPath string) yip.Stage {
 	}
 }
 
-func getKubeadmJoinStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
-	clusterRootPath := utils.GetClusterRootPath(cluster)
+func getKubeadmJoinStage(clusterCtx *domain.ClusterContext) yip.Stage {
+	clusterRootPath := clusterCtx.RootPath
 
 	joinStage := yip.Stage{
 		Name: "Run Kubeadm Join",
 		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 	}
 
-	if utils.IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
+	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
+		proxy := clusterCtx.EnvConfig
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), clusterCtx.NodeRole, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 		}
 	} else {
 		joinStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), cluster.Role, clusterRootPath),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-join.sh"), clusterCtx.NodeRole, clusterRootPath),
 			fmt.Sprintf("touch %s", filepath.Join(clusterRootPath, "opt/kubeadm.join")),
 		}
 	}
 	return joinStage
 }
 
-func getKubeadmJoinUpgradeStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration) yip.Stage {
+func getKubeadmJoinUpgradeStage(clusterCtx *domain.ClusterContext) yip.Stage {
 	upgradeStage := yip.Stage{
 		Name: "Run Kubeadm Join Upgrade",
 	}
 
-	clusterRootPath := utils.GetClusterRootPath(cluster)
-
-	if utils.IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
+	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
+		proxy := clusterCtx.EnvConfig
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, clusterRootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %t %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-upgrade.sh"), clusterCtx.NodeRole, clusterCtx.RootPath, true, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
 		}
 	} else {
 		upgradeStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-upgrade.sh"), cluster.Role, clusterRootPath),
+			fmt.Sprintf("bash %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-upgrade.sh"), clusterCtx.NodeRole, clusterCtx.RootPath),
 		}
 	}
 	return upgradeStage
 }
 
-func getKubeadmJoinCreateClusterConfigStage(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration, rootPath string) yip.Stage {
-	return yip.Stage{
-		Name: "Generate Cluster Config File",
-		Files: []yip.File{
-			{
-				Path:        filepath.Join(rootPath, configurationPath, "cluster-config.yaml"),
-				Permissions: 0640,
-				Content:     getUpdatedJoinClusterConfig(clusterCfg, initCfg, joinCfg),
-			},
-		},
-	}
+func getKubeadmJoinCreateClusterConfigStage(clusterCfgObj, initCfgObj, joinCfgObj runtime.Object, rootPath string) yip.Stage {
+	return utils.GetFileStage("Generate Cluster Config File", filepath.Join(rootPath, configurationPath, "cluster-config.yaml"), getUpdatedJoinClusterConfig(clusterCfgObj, initCfgObj, joinCfgObj))
 }
 
 func getKubeadmJoinCreateKubeletConfigStage(kubeletCfg kubeletv1beta1.KubeletConfiguration, rootPath string) yip.Stage {
-	return yip.Stage{
-		Name: "Generate Kubelet Config File",
-		Files: []yip.File{
-			{
-				Path:        filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"),
-				Permissions: 0640,
-				Content:     getUpdatedKubeletConfig(kubeletCfg),
-			},
-		},
-	}
+	return utils.GetFileStage("Generate Kubelet Config File", filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"), getUpdatedKubeletConfig(kubeletCfg))
 }
 
-func getKubeadmJoinReconfigureStage(cluster clusterplugin.Cluster, clusterCfg kubeadmapiv3.ClusterConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) yip.Stage {
+func getKubeadmJoinReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage {
 	reconfigureStage := yip.Stage{
 		Name: "Run Kubeadm Join Reconfiguration",
 	}
 
-	clusterRootPath := utils.GetClusterRootPath(cluster)
-	kubeletArgs := utils.RegenerateKubeletKubeadmArgsFile(&clusterCfg, &joinCfg.NodeRegistration, string(cluster.Role))
-	sansRevision := utils.GetCertSansRevision(clusterCfg.APIServer.CertSANs)
-
-	if utils.IsProxyConfigured(cluster.Env) {
-		proxy := cluster.Env
+	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
+		proxy := clusterCtx.EnvConfig
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, clusterRootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCfg, cluster.Env)),
+			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), cluster.Role, sansRevision, kubeletArgs, clusterRootPath),
+			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath),
 		}
 	}
 	return reconfigureStage
 }
 
-func getUpdatedJoinClusterConfig(clusterCfg kubeadmapiv3.ClusterConfiguration, initCfg kubeadmapiv3.InitConfiguration, joinCfg kubeadmapiv3.JoinConfiguration) string {
-	initPrintr := printers.NewTypeSetter(scheme).ToPrinter(&printers.YAMLPrinter{})
-
-	if joinCfg.ControlPlane != nil {
-		initCfg.LocalAPIEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
-		initCfg.LocalAPIEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+func getUpdatedJoinClusterConfig(clusterCfgObj, initCfgObj, joinCfgObj runtime.Object) string {
+	switch initCfgObj.(type) {
+	case *kubeadmapiv3.InitConfiguration:
+		initCfg := initCfgObj.(*kubeadmapiv3.InitConfiguration)
+		joinCfg := joinCfgObj.(*kubeadmapiv3.JoinConfiguration)
+		if joinCfg.ControlPlane != nil {
+			initCfg.LocalAPIEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
+			initCfg.LocalAPIEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+		}
+	case *kubeadmapiv4.InitConfiguration:
+		initCfg := initCfgObj.(*kubeadmapiv4.InitConfiguration)
+		joinCfg := joinCfgObj.(*kubeadmapiv4.JoinConfiguration)
+		if joinCfg.ControlPlane != nil {
+			initCfg.LocalAPIEndpoint.AdvertiseAddress = joinCfg.ControlPlane.LocalAPIEndpoint.AdvertiseAddress
+			initCfg.LocalAPIEndpoint.BindPort = joinCfg.ControlPlane.LocalAPIEndpoint.BindPort
+		}
 	}
 
-	out := bytes.NewBuffer([]byte{})
-	_ = initPrintr.PrintObj(&clusterCfg, out)
-	_ = initPrintr.PrintObj(&joinCfg, out)
-	_ = initPrintr.PrintObj(&initCfg, out)
-
-	return out.String()
+	return printObj([]runtime.Object{clusterCfgObj, initCfgObj, joinCfgObj})
 }
