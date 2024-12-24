@@ -18,11 +18,11 @@ import (
 )
 
 type kubeletFlagsOpts struct {
-	name                     string
-	pauseImage               string
-	criSocket                string
-	taints                   []v1.Taint
-	kubeletExtraArgs         map[string]string
+	name             string
+	criSocket        string
+	taints           []v1.Taint
+	kubeletExtraArgs map[string]string
+
 	registerTaintsUsingFlags bool
 }
 
@@ -70,10 +70,6 @@ func buildKubeletArgMapCommon(opts kubeletFlagsOpts) map[string]string {
 		kubeletFlags["container-runtime-endpoint"] = constants.CRISocketContainerd
 	} else {
 		kubeletFlags["container-runtime-endpoint"] = opts.criSocket
-	}
-
-	if opts.pauseImage != "" {
-		kubeletFlags["pod-infra-container-image"] = opts.pauseImage
 	}
 
 	if opts.registerTaintsUsingFlags && opts.taints != nil && len(opts.taints) > 0 {
