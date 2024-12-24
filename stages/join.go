@@ -24,6 +24,9 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	utils.MutateClusterConfigBeta3Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
 	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
 
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
+
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta3(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
 		getKubeadmJoinStage(clusterCtx),
@@ -42,6 +45,9 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta4) []yip.Stage {
 	utils.MutateClusterConfigBeta4Defaults(clusterCtx, &kubeadmConfig.ClusterConfiguration)
 	utils.MutateKubeletDefaults(clusterCtx, &kubeadmConfig.KubeletConfiguration)
+
+	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
+	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
 
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta4(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
