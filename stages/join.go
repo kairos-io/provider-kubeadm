@@ -11,8 +11,6 @@ import (
 
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 
-	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
 	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
@@ -36,7 +34,7 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
 		joinStg = append(joinStg,
 			getKubeadmJoinCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.JoinConfiguration, clusterCtx.RootPath),
-			getKubeadmJoinCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
+			getKubeadmJoinCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
 	}
 
 	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
@@ -58,7 +56,7 @@ func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
 		joinStg = append(joinStg,
 			getKubeadmJoinCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.JoinConfiguration, clusterCtx.RootPath),
-			getKubeadmJoinCreateKubeletConfigStage(kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
+			getKubeadmJoinCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
 	}
 
 	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
@@ -198,8 +196,8 @@ func getKubeadmJoinCreateClusterConfigStage(clusterCfgObj, initCfgObj, joinCfgOb
 	return utils.GetFileStage("Generate Cluster Config File", filepath.Join(rootPath, configurationPath, "cluster-config.yaml"), getUpdatedJoinClusterConfig(clusterCfgObj, initCfgObj, joinCfgObj))
 }
 
-func getKubeadmJoinCreateKubeletConfigStage(kubeletCfg kubeletv1beta1.KubeletConfiguration, rootPath string) yip.Stage {
-	return utils.GetFileStage("Generate Kubelet Config File", filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"), getUpdatedKubeletConfig(kubeletCfg))
+func getKubeadmJoinCreateKubeletConfigStage(clusterCfgObj, kubeletCfg runtime.Object, rootPath string) yip.Stage {
+	return utils.GetFileStage("Generate Kubelet Config File", filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"), getUpdatedKubeletConfig(clusterCfgObj, kubeletCfg))
 }
 
 func getKubeadmJoinReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage {
