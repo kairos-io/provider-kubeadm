@@ -47,7 +47,7 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 		getKubeadmPostInitStage(clusterCtx.RootPath),
 		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
-		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
+		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
 }
@@ -68,7 +68,7 @@ func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 		getKubeadmPostInitStage(clusterCtx.RootPath),
 		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
-		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
+		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
 }
@@ -133,8 +133,8 @@ func getKubeadmInitCreateClusterConfigStage(clusterCfgObj, initCfgObj runtime.Ob
 	return utils.GetFileStage("Generate Cluster Config File", filepath.Join(rootPath, configurationPath, "cluster-config.yaml"), getUpdatedInitClusterConfig(clusterCfgObj, initCfgObj))
 }
 
-func getKubeadmInitCreateKubeletConfigStage(clusterCfgObj, kubeletCfg runtime.Object, rootPath string) yip.Stage {
-	return utils.GetFileStage("Generate Kubelet Config File", filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"), getUpdatedKubeletConfig(clusterCfgObj, kubeletCfg))
+func getKubeadmInitCreateKubeletConfigStage(clusterCfgObj, initCfg, kubeletCfg runtime.Object, rootPath string) yip.Stage {
+	return utils.GetFileStage("Generate Kubelet Config File", filepath.Join(rootPath, configurationPath, "kubelet-config.yaml"), getUpdatedKubeletConfig(clusterCfgObj, initCfg, kubeletCfg))
 }
 
 func getKubeadmInitReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage {
@@ -229,8 +229,8 @@ func getUpdatedInitClusterConfig(clusterCfgObj, initCfgObj runtime.Object) strin
 	return printObj([]runtime.Object{clusterCfgObj, initCfgObj})
 }
 
-func getUpdatedKubeletConfig(clusterCfgObj, kubeletCfg runtime.Object) string {
-	return printObj([]runtime.Object{clusterCfgObj, kubeletCfg})
+func getUpdatedKubeletConfig(clusterCfgObj, initCfg, kubeletCfg runtime.Object) string {
+	return printObj([]runtime.Object{clusterCfgObj, initCfg, kubeletCfg})
 }
 
 func printObj(objects []runtime.Object) string {
