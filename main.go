@@ -80,7 +80,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 	clusterCtx := CreateClusterContext(cluster)
 
-	cmpResult, err := utils.IsKubeadmVersionGreaterThan131()
+	cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterCtx.RootPath)
 	if err != nil {
 		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
 	} else if cmpResult < 0 {

@@ -14,13 +14,13 @@ import (
 func GetClusterRootPath(cluster clusterplugin.Cluster) string {
 	rootpath := cluster.ProviderOptions[domain.ClusterRootPath]
 	if rootpath == "" {
-		return "/"
+		return domain.DefaultRootPath
 	}
 	return rootpath
 }
 
-func IsKubeadmVersionGreaterThan131() (int, error) {
-	currentVersion, err := getCurrentKubeadmVersion()
+func IsKubeadmVersionGreaterThan131(rootPath string) (int, error) {
+	currentVersion, err := getCurrentKubeadmVersion(rootPath)
 	if err != nil {
 		return 0, err
 	}
@@ -33,8 +33,14 @@ func IsKubeadmVersionGreaterThan131() (int, error) {
 	return v1.Compare("v1.31.0")
 }
 
-func getCurrentKubeadmVersion() (string, error) {
-	cmd := exec.Command("kubeadm", "version", "-o", "short")
+func getCurrentKubeadmVersion(rootPath string) (string, error) {
+	var kubeadmPath string
+	if rootPath != domain.DefaultRootPath {
+		kubeadmPath = fmt.Sprintf("%s/usr/bin/kubeadm", rootPath)
+	} else {
+		kubeadmPath = "kubeadm"
+	}
+	cmd := exec.Command(kubeadmPath, "version", "-o", "short")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("error getting current kubeadm version: %v", err)
