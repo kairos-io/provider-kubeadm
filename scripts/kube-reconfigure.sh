@@ -112,6 +112,20 @@ regenerate_etcd_manifests() {
   sleep 60
 }
 
+update_file_permissions() {
+  chmod 600 /var/lib/kubelet/config.yaml
+  chmod 600 /etc/systemd/system/kubelet.service
+
+  if [ -f /etc/kubernetes/pki/ca.crt ]; then
+    chmod 600 /etc/kubernetes/pki/ca.crt
+  fi
+
+  if [ -f /etc/kubernetes/proxy.conf ]; then
+    chown root:root /etc/kubernetes/proxy.conf
+    chmod 600 /etc/kubernetes/proxy.conf
+  fi
+}
+
 if [ "$node_role" != "worker" ];
 then
   regenerate_kube_components_manifests
@@ -121,4 +135,5 @@ then
 fi
 regenerate_kubelet_config
 regenerate_kubelet_envs
+update_file_permissions
 restart_kubelet
