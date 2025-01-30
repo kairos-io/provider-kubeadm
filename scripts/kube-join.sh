@@ -55,8 +55,7 @@ if [ "$PROXY_CONFIGURED" = true ]; then
   do
     backup_kube_vip_manifest_if_present
     echo "failed to apply kubeadm join, will retry in 10s";
-    kubeadm reset -f
-    iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
+    do_kubeadm_reset
     echo "retrying in 10s"
     sleep 10;
     restore_kube_vip_manifest_after_reset
@@ -66,8 +65,7 @@ else
   do
    backup_kube_vip_manifest_if_present
    echo "failed to apply kubeadm join, will retry in 10s";
-   kubeadm reset -f
-   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
+   do_kubeadm_reset
    echo "retrying in 10s"
    sleep 10;
    restore_kube_vip_manifest_after_reset
