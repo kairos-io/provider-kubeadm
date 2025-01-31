@@ -25,10 +25,27 @@ jobs:
         with:
           version: "latest"
       - run: earthly --ci +lint
-  build-provider-package:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            fips: false
+            image_repository: us-docker.pkg.dev/palette-images/edge/kairos-io
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            fips: true
+            image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
+          - runner: github-arm64-2c-8gb
+            platform: linux/arm64
+            fips: false
+            image_repository: us-docker.pkg.dev/palette-images/edge/kairos-io
+          - runner: github-arm64-2c-8gb
+            platform: linux/arm64
+            fips: true
+            image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -42,11 +59,17 @@ jobs:
         with:
           version: "latest"
       - run: echo "${{ secrets.ARTIFACT_IMG_PUSH_EDGE }}" | base64 -d | docker login -u _json_key --password-stdin us-docker.pkg.dev
-      - run: earthly --ci --push --output +provider-package-all-platforms --IMAGE_REPOSITORY=us-docker.pkg.dev/palette-images/edge/kairos-io
-  build-fips-provider-package:
+      - run: earthly --ci --push --output --platform=${{ matrix.platform }} +build-provider-package --IMAGE_REPOSITORY=${{ matrix.image_repository }} --FIPS_ENABLED=${{ matrix.fips }}
+  push:
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - fips: false
+            image_repository: us-docker.pkg.dev/palette-images/edge/kairos-io
+          - fips: true
+            image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -60,4 +83,4 @@ jobs:
         with:
           version: "latest"
       - run: echo "${{ secrets.ARTIFACT_IMG_PUSH_EDGE }}" | base64 -d | docker login -u _json_key --password-stdin us-docker.pkg.dev
-      - run: earthly --ci --push --output +provider-package-all-platforms --IMAGE_REPOSITORY=us-docker.pkg.dev/palette-images-fips/edge/kairos-io --FIPS_ENABLED=true
+      - run: earthly --ci --push --output +provider-package-merge --IMAGE_REPOSITORY=${{ matrix.image_repository }} --FIPS_ENABLED=${{ matrix.fips }}
