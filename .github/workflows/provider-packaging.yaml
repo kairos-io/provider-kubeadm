@@ -37,6 +37,14 @@ jobs:
             platform: linux/amd64
             fips: true
             image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
+          - runner: github-arm64-2c-8gb
+            platform: linux/arm64
+            fips: false
+            image_repository: us-docker.pkg.dev/palette-images/edge/kairos-io
+          - runner: github-arm64-2c-8gb
+            platform: linux/arm64
+            fips: true
+            image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
