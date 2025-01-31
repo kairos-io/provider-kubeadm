@@ -217,6 +217,8 @@ provider-package-merge:
     BUILD --platform=linux/amd64 --platform=linux/arm64 +provider-package-pull
 
 provider-package-pull:
+    DO +VERSION
+    ARG VERSION=$(cat VERSION)
     ARG TARGETARCH
     FROM ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}-${TARGETARCH}
     SAVE IMAGE --push ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}
