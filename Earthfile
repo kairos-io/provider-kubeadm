@@ -78,12 +78,12 @@ build-provider:
 
 build-provider-package:
     DO +VERSION
+    ARG TARGETARCH
     ARG VERSION=$(cat VERSION)
     FROM scratch
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
     COPY scripts/ /opt/kubeadm/scripts/
-    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:latest
-    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}
+    SAVE IMAGE --push $IMAGE_REPOSITORY/provider-kubeadm:${VERSION}-${TARGETARCH}
 
 lint:
     FROM golang:$GOLANG_VERSION
@@ -211,11 +211,16 @@ cosign:
     DO +SAVE_IMAGE --VERSION=$VERSION
 
 docker-all-platforms:
-     BUILD --platform=linux/amd64 +docker
+    BUILD --platform=linux/amd64 +docker
 
-provider-package-all-platforms:
-     BUILD --platform=linux/amd64 +build-provider-package
-     BUILD --platform=linux/arm64 +build-provider-package
+provider-package-merge:
+    BUILD --platform=linux/amd64 --platform=linux/arm64 +provider-package-pull
+
+provider-package-pull:
+    ARG TARGETARCH
+    FROM ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}-${TARGETARCH}
+    SAVE IMAGE --push ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}
+
 
 cosign-all-platforms:
      BUILD --platform=linux/amd64 +cosign
