@@ -1,5 +1,10 @@
 #!/bin/bash
 
+exec   > >(tee -ia /var/log/kube-pre-init.log)
+exec  2> >(tee -ia /var/log/kube-pre-init.log >& 2)
+exec 19>> /var/log/kube-pre-init.log
+
+export BASH_XTRACEFD="19"
 set -x
 
 root_path=$1
@@ -18,6 +23,7 @@ if [ ! -f "$root_path"/usr/local/bin/kubelet ]; then
 fi
 
 if [ -f "$root_path"/usr/bin/kubelet ]; then
+  systemctl stop kubelet
   cp "$root_path"/usr/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl daemon-reload && systemctl restart kubelet
 fi
