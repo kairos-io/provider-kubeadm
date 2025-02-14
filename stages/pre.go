@@ -16,8 +16,10 @@ const (
 func GetPreKubeadmCommandStages(rootPath string) yip.Stage {
 	return yip.Stage{
 		Name: "Run Pre Kubeadm Commands",
+		If:   fmt.Sprintf("[ ! -f %s ]", filepath.Join(rootPath, "opt/kubeadm-pre.init")),
 		Commands: []string{
 			fmt.Sprintf("/bin/bash %s %s", filepath.Join(rootPath, helperScriptPath, "kube-pre-init.sh"), rootPath),
+			fmt.Sprintf("touch %s", filepath.Join(rootPath, "opt/kubeadm-pre.init")),
 		},
 	}
 }
