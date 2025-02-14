@@ -112,6 +112,7 @@ run_upgrade() {
 
             if [ "$master_api_version" = "$old_version" ]
             then
+                kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
                 upgrade_command="kubeadm upgrade apply -y $current_version"
                 if [ "$PROXY_CONFIGURED" = true ]; then
                   up=("kubeadm upgrade apply -y ${current_version}")
@@ -148,9 +149,8 @@ run_upgrade() {
               sleep 60
           fi
         fi
-
-        upgrade_kubelet
     done
+    upgrade_kubelet
 }
 
 run_upgrade

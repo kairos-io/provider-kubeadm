@@ -22,12 +22,6 @@ if [ ! -f "$root_path"/usr/local/bin/kubelet ]; then
   systemctl enable kubelet && systemctl start kubelet
 fi
 
-if [ -f "$root_path"/usr/bin/kubelet ]; then
-  systemctl stop kubelet
-  cp "$root_path"/usr/bin/kubelet "$root_path"/usr/local/bin/kubelet
-  systemctl daemon-reload && systemctl restart kubelet
-fi
-
 if systemctl cat spectro-containerd >/dev/null 2<&1; then
   systemctl enable spectro-containerd && systemctl restart spectro-containerd
 fi
