@@ -48,8 +48,10 @@ delete_lock_config_map() {
 
 upgrade_kubelet() {
   echo "upgrading kubelet"
+  systemctl stop kubelet
   cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl daemon-reload && systemctl restart kubelet
+  systemctl restart containerd
   echo "kubelet upgraded"
 }
 
@@ -112,7 +114,6 @@ run_upgrade() {
 
             if [ "$master_api_version" = "$old_version" ]
             then
-                kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
                 upgrade_command="kubeadm upgrade apply -y $current_version"
                 if [ "$PROXY_CONFIGURED" = true ]; then
                   up=("kubeadm upgrade apply -y ${current_version}")
