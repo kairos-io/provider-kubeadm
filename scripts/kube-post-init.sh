@@ -11,6 +11,7 @@ root_path=$1
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 while true;
 do

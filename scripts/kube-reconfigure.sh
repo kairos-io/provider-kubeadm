@@ -19,6 +19,7 @@ proxy_https=$6
 proxy_no=$7
 
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 certs_sans_revision_path="$root_path/opt/kubeadm/.kubeadm_certs_sans_revision"
 

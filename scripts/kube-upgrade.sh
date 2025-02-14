@@ -15,6 +15,7 @@ proxy_https=$5
 proxy_no=$6
 
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
@@ -37,12 +38,19 @@ get_current_upgrading_node_name() {
   kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
 }
 
-delete_lock_config_map(){
+delete_lock_config_map() {
   # Delete the configmap lock once the upgrade completes
   if [ "$NODE_ROLE" != "worker" ]
   then
     kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system
   fi
+}
+
+upgrade_kubelet() {
+  echo "upgrading kubelet"
+  cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
+  systemctl daemon-reload && systemctl restart kubelet
+  echo "kubelet upgraded"
 }
 
 run_upgrade() {
@@ -140,6 +148,9 @@ run_upgrade() {
               sleep 60
           fi
         fi
+
+        upgrade_kubelet
     done
 }
+
 run_upgrade
