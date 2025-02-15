@@ -34,6 +34,8 @@ fi
 
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
 get_current_upgrading_node_name() {
   kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
 }
@@ -57,11 +59,11 @@ upgrade_kubelet() {
 
 apply_new_kubeadm_config() {
   kubectl get cm kubeadm-config -n kube-system -o jsonpath="{['data']['ClusterConfiguration']}" --kubeconfig /etc/kubernetes/admin.conf > "$root_path"/opt/kubeadm/existing-cluster-config.yaml
-  kubeadm init phase upload kubeadm --kubeconfig /etc/kubernetes/admin.conf --config-file "$root_path"/opt/kubeadm/cluster-config.yaml
+  kubeadm init phase upload kubeadm --config-file "$root_path"/opt/kubeadm/cluster-config.yaml
 }
 
 revert_kubeadm_config() {
-  kubeadm init phase upload kubeadm --kubeconfig /etc/kubernetes/admin.conf --config-file "$root_path"/opt/kubeadm/existing-cluster-config.yaml
+  kubeadm init phase upload kubeadm --config-file "$root_path"/opt/kubeadm/existing-cluster-config.yaml
 }
 
 run_upgrade() {
