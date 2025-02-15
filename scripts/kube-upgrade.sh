@@ -55,6 +55,15 @@ upgrade_kubelet() {
   echo "kubelet upgraded"
 }
 
+apply_new_kubeadm_config() {
+  kubectl get cm kubeadm-config -n kube-system -o jsonpath="{['data']['ClusterConfiguration']}" --kubeconfig /etc/kubernetes/admin.conf > "$root_path"/opt/kubeadm/existing-cluster-config.yaml
+  kubeadm init phase upload kubeadm --kubeconfig /etc/kubernetes/admin.conf --config-file "$root_path"/opt/kubeadm/cluster-config.yaml
+}
+
+revert_kubeadm_config() {
+  kubeadm init phase upload kubeadm --kubeconfig /etc/kubernetes/admin.conf --config-file "$root_path"/opt/kubeadm/existing-cluster-config.yaml
+}
+
 run_upgrade() {
     echo "running upgrade process on $NODE_ROLE"
 
@@ -114,6 +123,7 @@ run_upgrade() {
 
             if [ "$master_api_version" = "$old_version" ]
             then
+                apply_new_kubeadm_config
                 upgrade_command="kubeadm upgrade apply -y $current_version"
                 if [ "$PROXY_CONFIGURED" = true ]; then
                   up=("kubeadm upgrade apply -y ${current_version}")
@@ -123,32 +133,22 @@ run_upgrade() {
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
 
-        if [ "$PROXY_CONFIGURED" = true ]; then
-          if sudo -E bash -c "$upgrade_command"
-          then
-              # Update current client version in the version file
-              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
-              old_version=$current_version
+        if sudo -E bash -c "$upgrade_command"
+        then
+            # Update current client version in the version file
+            echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
+            old_version=$current_version
 
-              delete_lock_config_map
-              echo "upgrade success"
-          else
-              echo "upgrade failed, retrying in 60 seconds"
-              sleep 60
-          fi
+            delete_lock_config_map
+            echo "upgrade success"
         else
-          if $upgrade_command
-          then
-              # Update current client version in the version file
-              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
-              old_version=$current_version
-
-              delete_lock_config_map
-              echo "upgrade success"
-          else
-              echo "upgrade failed, retrying in 60 seconds"
-              sleep 60
-          fi
+            echo "upgrade failed"
+            if echo "$upgrade_command" | grep -q "apply"; then
+              echo "reverting kubeadm config"
+              revert_kubeadm_config
+            fi
+            echo "retrying in 60 seconds"
+            sleep 60
         fi
     done
     upgrade_kubelet
