@@ -82,7 +82,12 @@ regenerate_kubelet_envs() {
   if [ "$node_role" != "worker" ];
   then
     mv /etc/kubernetes/kubelet.conf /etc/kubernetes/kubelet.conf.bak
-    kubeadm init phase kubeconfig kubelet
+    NODE_IP=$(grep "node-ip" "$root_path"/opt/kubeadm/kubeadm.yaml | awk '{print $2}')
+    if [[ -n "$NODE_IP" ]]; then
+        kubeadm init phase kubeconfig kubelet --apiserver-advertise-address "$NODE_IP"
+    else
+        kubeadm init phase kubeconfig kubelet
+    fi
   fi
 
   systemctl restart kubelet
