@@ -15,6 +15,7 @@ proxy_no=$5
 KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 do_kubeadm_reset() {
   if [ -S /run/spectro/containerd/containerd.sock ]; then

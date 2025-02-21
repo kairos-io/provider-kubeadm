@@ -16,6 +16,7 @@ proxy_https=$5
 proxy_no=$6
 
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 

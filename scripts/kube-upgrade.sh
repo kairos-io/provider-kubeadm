@@ -15,6 +15,7 @@ proxy_https=$5
 proxy_no=$6
 
 export PATH="$PATH:$root_path/usr/bin"
+export PATH="$PATH:$root_path/usr/local/bin"
 
 if [ -n "$proxy_no" ]; then
   export NO_PROXY=$proxy_no
@@ -33,16 +34,36 @@ fi
 
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
 get_current_upgrading_node_name() {
   kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{['data']['node']}"
 }
 
-delete_lock_config_map(){
+delete_lock_config_map() {
   # Delete the configmap lock once the upgrade completes
   if [ "$NODE_ROLE" != "worker" ]
   then
     kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system
   fi
+}
+
+upgrade_kubelet() {
+  echo "upgrading kubelet"
+  systemctl stop kubelet
+  cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
+  systemctl daemon-reload && systemctl restart kubelet
+  systemctl restart containerd
+  echo "kubelet upgraded"
+}
+
+apply_new_kubeadm_config() {
+  kubectl get cm kubeadm-config -n kube-system -o jsonpath="{['data']['ClusterConfiguration']}" --kubeconfig /etc/kubernetes/admin.conf > "$root_path"/opt/kubeadm/existing-cluster-config.yaml
+  kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
+}
+
+revert_kubeadm_config() {
+  kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/existing-cluster-config.yaml
 }
 
 run_upgrade() {
@@ -104,6 +125,7 @@ run_upgrade() {
 
             if [ "$master_api_version" = "$old_version" ]
             then
+                apply_new_kubeadm_config
                 upgrade_command="kubeadm upgrade apply -y $current_version"
                 if [ "$PROXY_CONFIGURED" = true ]; then
                   up=("kubeadm upgrade apply -y ${current_version}")
@@ -113,33 +135,25 @@ run_upgrade() {
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
 
-        if [ "$PROXY_CONFIGURED" = true ]; then
-          if sudo -E bash -c "$upgrade_command"
-          then
-              # Update current client version in the version file
-              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
-              old_version=$current_version
+        if sudo -E bash -c "$upgrade_command"
+        then
+            # Update current client version in the version file
+            echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
+            old_version=$current_version
 
-              delete_lock_config_map
-              echo "upgrade success"
-          else
-              echo "upgrade failed, retrying in 60 seconds"
-              sleep 60
-          fi
+            delete_lock_config_map
+            echo "upgrade success"
         else
-          if $upgrade_command
-          then
-              # Update current client version in the version file
-              echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
-              old_version=$current_version
-
-              delete_lock_config_map
-              echo "upgrade success"
-          else
-              echo "upgrade failed, retrying in 60 seconds"
-              sleep 60
-          fi
+            echo "upgrade failed"
+            if echo "$upgrade_command" | grep -q "apply"; then
+              echo "reverting kubeadm config"
+              revert_kubeadm_config
+            fi
+            echo "retrying in 60 seconds"
+            sleep 60
         fi
     done
+    upgrade_kubelet
 }
+
 run_upgrade

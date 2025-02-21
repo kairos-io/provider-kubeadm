@@ -45,8 +45,8 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
 		getKubeadmInitStage(clusterCtx),
 		getKubeadmPostInitStage(clusterCtx.RootPath),
-		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
+		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
@@ -66,8 +66,8 @@ func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
 		getKubeadmInitStage(clusterCtx),
 		getKubeadmPostInitStage(clusterCtx.RootPath),
-		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateClusterConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, clusterCtx.RootPath),
+		getKubeadmInitUpgradeStage(clusterCtx),
 		getKubeadmInitCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath),
 		getKubeadmInitReconfigureStage(clusterCtx),
 	}
