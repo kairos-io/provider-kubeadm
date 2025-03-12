@@ -25,6 +25,7 @@ if [ -f "$root_path"/opt/spectrocloud/kubeadm/bin/kubelet ]; then
 fi
 
 if [ ! -f "$root_path"/usr/local/bin/kubelet ]; then
+  mkdir -p "$root_path"/usr/local/bin
   cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl enable kubelet && systemctl start kubelet
 fi
