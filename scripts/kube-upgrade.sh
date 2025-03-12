@@ -48,12 +48,22 @@ delete_lock_config_map() {
   fi
 }
 
+restart_containerd() {
+  if systemctl cat spectro-containerd >/dev/null 2<&1; then
+    systemctl restart spectro-containerd
+  fi
+
+  if systemctl cat containerd >/dev/null 2<&1; then
+    systemctl restart containerd
+  fi
+}
+
 upgrade_kubelet() {
   echo "upgrading kubelet"
   systemctl stop kubelet
-  cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
+  cp /opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl daemon-reload && systemctl restart kubelet
-  systemctl restart containerd
+  restart_containerd
   echo "kubelet upgraded"
 }
 

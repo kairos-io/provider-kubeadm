@@ -17,6 +17,16 @@ KUBE_VIP_LOC="/etc/kubernetes/manifests/kube-vip.yaml"
 export PATH="$PATH:$root_path/usr/bin"
 export PATH="$PATH:$root_path/usr/local/bin"
 
+restart_containerd() {
+  if systemctl cat spectro-containerd >/dev/null 2<&1; then
+    systemctl restart spectro-containerd
+  fi
+
+  if systemctl cat containerd >/dev/null 2<&1; then
+    systemctl restart containerd
+  fi
+}
+
 do_kubeadm_reset() {
   if [ -S /run/spectro/containerd/containerd.sock ]; then
     kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
@@ -26,14 +36,12 @@ do_kubeadm_reset() {
 
   iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
   rm -rf "$root_path"/etc/cni/net.d
+  if [ -f /run/systemd/system/etc-cni-net.d.mount ]; then
+    mkdir -p "$root_path"/etc/cni/net.d
+    systemctl restart etc-cni-net.d.mount
+  fi
   systemctl daemon-reload
-  if systemctl cat spectro-containerd >/dev/null 2<&1; then
-    systemctl restart spectro-containerd
-  fi
-
-  if systemctl cat containerd >/dev/null 2<&1; then
-    systemctl restart containerd
-  fi
+  restart_containerd
 }
 
 backup_kube_vip_manifest_if_present() {
