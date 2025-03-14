@@ -11,6 +11,7 @@ type ClusterContext struct {
 	ClusterToken                string `json:"clusterToken" yaml:"clusterToken"`
 	UserOptions                 string `json:"userOptions" yaml:"userOptions"`
 	LocalImagesPath             string `json:"localImagesPath" yaml:"localImagesPath"`
+	CustomNodeIp                string `json:"customNodeIp" yaml:"customNodeIp"`
 	ContainerdServiceFolderName string `json:"containerdServiceFolderName" yaml:"containerdServiceFolderName"`
 
 	EnvConfig map[string]string `json:"envConfig" yaml:"envConfig"`

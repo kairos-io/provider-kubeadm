@@ -24,6 +24,7 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
+	clusterCtx.CustomNodeIp = kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs["node-ip"]
 
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta3(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
@@ -46,6 +47,7 @@ func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
+	clusterCtx.CustomNodeIp = getArgValue(kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs, "node-ip")
 
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta4(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
@@ -208,11 +210,14 @@ func getKubeadmJoinReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage
 	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
 		proxy := clusterCtx.EnvConfig
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
+			fmt.Sprintf("bash %s %s %s %s %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath, clusterCtx.CustomNodeIp,
+				proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath),
+			fmt.Sprintf("bash %s %s %s %s %s %s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterCtx.RootPath, clusterCtx.CustomNodeIp),
 		}
 	}
 	return reconfigureStage
