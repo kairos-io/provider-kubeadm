@@ -14,9 +14,10 @@ node_role=$1
 certs_sans_revision=$2
 kubelet_envs=$3
 root_path=$4
-proxy_http=$5
-proxy_https=$6
-proxy_no=$7
+custom_node_ip=$5
+proxy_http=$6
+proxy_https=$7
+proxy_no=$8
 
 export PATH="$PATH:$root_path/usr/bin"
 export PATH="$PATH:$root_path/usr/local/bin"
@@ -83,9 +84,8 @@ regenerate_kubelet_envs() {
   if [ "$node_role" != "worker" ];
   then
     mv /etc/kubernetes/kubelet.conf /etc/kubernetes/kubelet.conf.bak
-    NODE_IP=$(grep "node-ip" "$root_path"/opt/kubeadm/kubeadm.yaml | awk '{print $2}')
-    if [[ -n "$NODE_IP" ]]; then
-        kubeadm init phase kubeconfig kubelet --apiserver-advertise-address "$NODE_IP"
+    if [[ -n "$custom_node_ip" ]]; then
+        kubeadm init phase kubeconfig kubelet --apiserver-advertise-address "$custom_node_ip"
     else
         kubeadm init phase kubeconfig kubelet
     fi

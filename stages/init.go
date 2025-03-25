@@ -40,6 +40,7 @@ func GetInitYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
+	clusterCtx.CustomNodeIp = kubeadmConfig.InitConfiguration.NodeRegistration.KubeletExtraArgs["node-ip"]
 
 	return []yip.Stage{
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta3(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
@@ -61,6 +62,7 @@ func GetInitYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.InitConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
+	clusterCtx.CustomNodeIp = getArgValue(kubeadmConfig.InitConfiguration.NodeRegistration.KubeletExtraArgs, "node-ip")
 
 	return []yip.Stage{
 		getKubeadmInitConfigStage(getInitNodeConfigurationBeta4(clusterCtx, kubeadmConfig.InitConfiguration, kubeadmConfig.ClusterConfiguration, kubeadmConfig.KubeletConfiguration), clusterCtx.RootPath),
@@ -147,11 +149,14 @@ func getKubeadmInitReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage
 	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
 		proxy := clusterCtx.EnvConfig
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"], utils.GetNoProxyConfig(clusterCtx)),
+			fmt.Sprintf("bash %s %s %s %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath, clusterCtx.CustomNodeIp, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"],
+				utils.GetNoProxyConfig(clusterCtx)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole, clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath),
+			fmt.Sprintf("bash %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath, clusterCtx.CustomNodeIp),
 		}
 	}
 	return reconfigureStage
@@ -242,4 +247,14 @@ func printObj(objects []runtime.Object) string {
 	}
 
 	return out.String()
+}
+
+func getArgValue(args []kubeadmapiv4.Arg, name string) string {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg.Name == name {
+			return arg.Value
+		}
+	}
+	return ""
 }
