@@ -149,13 +149,13 @@ func getKubeadmInitReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage
 	if utils.IsProxyConfigured(clusterCtx.EnvConfig) {
 		proxy := clusterCtx.EnvConfig
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+			fmt.Sprintf("bash %[1]s %[2]s %[3]s %[4]s %[5]s %[6]s %[7]s %[8]s %[9]s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
 				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath, clusterCtx.CustomNodeIp, proxy["HTTP_PROXY"], proxy["HTTPS_PROXY"],
 				utils.GetNoProxyConfig(clusterCtx)),
 		}
 	} else {
 		reconfigureStage.Commands = []string{
-			fmt.Sprintf("bash %s %s %s %s %s %s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
+			fmt.Sprintf("bash %[1]s %[2]s %[3]s %[4]s %[5]s %[6]s", filepath.Join(clusterRootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
 				clusterCtx.CertSansRevision, clusterCtx.KubeletArgs, clusterRootPath, clusterCtx.CustomNodeIp),
 		}
 	}
