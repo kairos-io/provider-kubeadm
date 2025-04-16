@@ -116,6 +116,13 @@ func MutateKubeletDefaults(clusterCtx *domain.ClusterContext, kubeletCfg *kubele
 	}
 }
 
+func ValueOrDefaultString(value, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
 func appendIfNotPresent(slice []string, element string) []string {
 	for _, e := range slice {
 		if e == element {
