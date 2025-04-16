@@ -24,7 +24,7 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta3Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
-	clusterCtx.CustomNodeIp = kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs["node-ip"]
+	clusterCtx.CustomNodeIp = utils.ValueOrDefaultString(kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs["node-ip"], "''")
 
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta3(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
@@ -47,7 +47,7 @@ func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 
 	clusterCtx.KubeletArgs = utils.RegenerateKubeletKubeadmArgsUsingBeta4Config(&kubeadmConfig.JoinConfiguration.NodeRegistration, clusterCtx.NodeRole)
 	clusterCtx.CertSansRevision = utils.GetCertSansRevision(kubeadmConfig.ClusterConfiguration.APIServer.CertSANs)
-	clusterCtx.CustomNodeIp = getArgValue(kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs, "node-ip")
+	clusterCtx.CustomNodeIp = utils.ValueOrDefaultString(getArgValue(kubeadmConfig.JoinConfiguration.NodeRegistration.KubeletExtraArgs, "node-ip"), "''")
 
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta4(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
