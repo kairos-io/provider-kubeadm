@@ -223,7 +223,7 @@ func getKubeadmJoinReconfigureStage(clusterCtx *domain.ClusterContext) yip.Stage
 			utils.GetNoProxyConfig(clusterCtx),
 		}
 
-		reconfigureStage.Commands = []string{strings.Join(args, "")}
+		reconfigureStage.Commands = []string{strings.Join(args, " ")}
 	} else {
 		reconfigureStage.Commands = []string{
 			fmt.Sprintf("bash %[1]s %[2]s %[3]s %[4]s %[5]s %[6]s", filepath.Join(clusterCtx.RootPath, helperScriptPath, "kube-reconfigure.sh"), clusterCtx.NodeRole,
