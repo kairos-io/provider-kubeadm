@@ -10,12 +10,12 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.31.2
-	k8s.io/apimachinery v0.31.2
-	k8s.io/cli-runtime v0.24.0
-	k8s.io/cluster-bootstrap v0.24.0
-	k8s.io/component-helpers v0.27.1
-	k8s.io/kubelet v0.31.2
+	k8s.io/api v0.33.0
+	k8s.io/apimachinery v0.33.0
+	k8s.io/cli-runtime v0.33.0
+	k8s.io/cluster-bootstrap v0.33.0
+	k8s.io/component-helpers v0.33.0
+	k8s.io/kubelet v0.33.0
 	k8s.io/kubernetes v1.31.2
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/yaml v1.4.0
