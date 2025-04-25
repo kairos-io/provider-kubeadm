@@ -101,9 +101,9 @@ DOWNLOAD_BINARIES:
         RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubectl
     ELSE
         RUN curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /usr/bin/ -xz
-        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
-        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
-        RUN curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl
+        RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
+        RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
+        RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl
     END
 
 SETUP_CONTAINERD:
