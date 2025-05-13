@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/kairos-io/kairos-sdk v0.5.0
+	github.com/kairos-io/kairos-sdk v0.9.3
 	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
 	github.com/mudler/yip v1.10.0
 	github.com/sirupsen/logrus v1.9.3
