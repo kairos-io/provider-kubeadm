@@ -95,7 +95,12 @@ regenerate_kubelet_envs() {
 }
 
 regenerate_kubelet_config() {
-  kubeadm upgrade node phase kubelet-config
+  PATCHES=$(awk '/patches:/{getline; print $2}' "$root_path"/opt/kubeadm/kubeadm.yaml)
+  if [ "${PATCHES}" = "" ]; then
+    kubeadm upgrade node phase kubelet-config
+  else
+    kubeadm upgrade node phase kubelet-config --patches $PATCHES
+  fi
 }
 
 upload_kubelet_config() {
