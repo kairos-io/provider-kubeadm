@@ -135,9 +135,10 @@ func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	// pre stages
 	finalStages = append(finalStages, getKubeadmPreStages(clusterCtx)...)
 
-	if clusterCtx.NodeRole == clusterplugin.RoleInit {
+	switch clusterCtx.NodeRole {
+	case clusterplugin.RoleInit:
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
-	} else if (clusterCtx.NodeRole == clusterplugin.RoleControlPlane) || (clusterCtx.NodeRole == clusterplugin.RoleWorker) {
+	case clusterplugin.RoleControlPlane, clusterplugin.RoleWorker:
 		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta3(clusterCtx, kubeadmConfig)...)
 	}
 
@@ -158,9 +159,10 @@ func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	// pre stages
 	finalStages = append(finalStages, getKubeadmPreStages(clusterCtx)...)
 
-	if clusterCtx.NodeRole == clusterplugin.RoleInit {
+	switch clusterCtx.NodeRole {
+	case clusterplugin.RoleInit:
 		finalStages = append(finalStages, stages.GetInitYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
-	} else if (clusterCtx.NodeRole == clusterplugin.RoleControlPlane) || (clusterCtx.NodeRole == clusterplugin.RoleWorker) {
+	case clusterplugin.RoleControlPlane, clusterplugin.RoleWorker:
 		finalStages = append(finalStages, stages.GetJoinYipStagesV1Beta4(clusterCtx, kubeadmConfig)...)
 	}
 
