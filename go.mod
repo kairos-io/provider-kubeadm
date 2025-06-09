@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/kairos-io/kairos-sdk v0.5.0
 	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
-	github.com/mudler/yip v1.16.2
+	github.com/mudler/yip v1.16.3
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
