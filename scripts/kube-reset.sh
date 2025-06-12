@@ -32,6 +32,7 @@ fi
 
 umount -l /var/lib/kubelet
 rm -rf /var/lib/kubelet && rm -rf ${STYLUS_ROOT}/var/lib/kubelet
+rm -f $STYLUS_ROOT/usr/local/bin/kubelet
 umount -l /var/lib/spectro/containerd
 rm -rf /var/lib/spectro/containerd && rm -rf ${STYLUS_ROOT}/var/lib/spectro/containerd
 umount -l /opt/bin
