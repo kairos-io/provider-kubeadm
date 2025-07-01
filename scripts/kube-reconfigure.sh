@@ -137,6 +137,7 @@ update_file_permissions() {
   fi
 }
 
+restart_kubelet
 if [ "$node_role" != "worker" ];
 then
   regenerate_kube_components_manifests
