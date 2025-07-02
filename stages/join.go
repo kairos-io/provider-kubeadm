@@ -29,7 +29,6 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta3(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
 		getKubeadmJoinStage(clusterCtx),
-		getKubeadmJoinUpgradeStage(clusterCtx),
 	}
 
 	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
@@ -38,7 +37,9 @@ func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig do
 			getKubeadmJoinCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
 	}
 
-	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
+	return append(joinStg,
+		getKubeadmJoinUpgradeStage(clusterCtx),
+		getKubeadmJoinReconfigureStage(clusterCtx))
 }
 
 func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta4) []yip.Stage {
@@ -52,7 +53,6 @@ func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 	joinStg := []yip.Stage{
 		getKubeadmJoinConfigStage(getJoinNodeConfigurationBeta4(clusterCtx, kubeadmConfig.JoinConfiguration), clusterCtx.RootPath),
 		getKubeadmJoinStage(clusterCtx),
-		getKubeadmJoinUpgradeStage(clusterCtx),
 	}
 
 	if clusterCtx.NodeRole != clusterplugin.RoleWorker {
@@ -61,7 +61,9 @@ func GetJoinYipStagesV1Beta4(clusterCtx *domain.ClusterContext, kubeadmConfig do
 			getKubeadmJoinCreateKubeletConfigStage(&kubeadmConfig.ClusterConfiguration, &kubeadmConfig.InitConfiguration, &kubeadmConfig.KubeletConfiguration, clusterCtx.RootPath))
 	}
 
-	return append(joinStg, getKubeadmJoinReconfigureStage(clusterCtx))
+	return append(joinStg,
+		getKubeadmJoinUpgradeStage(clusterCtx),
+		getKubeadmJoinReconfigureStage(clusterCtx))
 }
 
 func getJoinNodeConfigurationBeta3(clusterCtx *domain.ClusterContext, joinCfg kubeadmapiv3.JoinConfiguration) string {
