@@ -84,3 +84,22 @@ jobs:
           version: "latest"
       - run: echo "${{ secrets.ARTIFACT_IMG_PUSH_EDGE }}" | base64 -d | docker login -u _json_key --password-stdin us-docker.pkg.dev
       - run: earthly --ci --push --output +provider-package-merge --IMAGE_REPOSITORY=${{ matrix.image_repository }} --FIPS_ENABLED=${{ matrix.fips }}
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git fetch --prune --unshallow
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Install gcc for arm64
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
