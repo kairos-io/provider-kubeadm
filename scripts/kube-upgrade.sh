@@ -1,10 +1,25 @@
 #!/bin/bash
-
-exec   > >(tee -ia /var/log/kube-upgrade.log)
-exec  2> >(tee -ia /var/log/kube-upgrade.log >& 2)
-exec 19>> /var/log/kube-upgrade.log
+logfile="var/log/kube-upgrade-$(date +%Y-%m-%d_%H-%M-%S).log"
+exec   > >(tee -ia $logfile)
+exec  2> >(tee -ia $logfile >& 2)
+exec 19>> $logfile
 
 set -x
+
+# Track if this node owns the upgrade lock
+OWN_UPGRADE_LOCK="false"
+
+# Cleanup function to ensure lock is always removed if we own it
+cleanup() {
+  local exit_code=$?
+  if [ "$OWN_UPGRADE_LOCK" == "true" ]; then
+    delete_lock_config_map
+  fi
+  exit $exit_code
+}
+
+# Trap various signals to ensure cleanup
+trap cleanup EXIT SIGINT SIGTERM SIGQUIT
 
 NODE_ROLE=$1
 
@@ -109,6 +124,8 @@ run_upgrade() {
         echo "failed to create configmap for upgrade lock, upgrading is going on the node ${upgrade_node}, retrying in 60 sec"
         sleep 60
       done
+      
+      OWN_UPGRADE_LOCK="true"
     fi
 
     # Upgrade loop, runs until both stored and current is same
@@ -147,11 +164,7 @@ run_upgrade() {
 
         if sudo -E bash -c "$upgrade_command"
         then
-            # Update current client version in the version file
-            echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
             old_version=$current_version
-
-            delete_lock_config_map
             echo "upgrade success"
         else
             echo "upgrade failed"
@@ -164,6 +177,9 @@ run_upgrade() {
         fi
     done
     upgrade_kubelet
+    # Update current client version in the version file
+    echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
+    echo "upgrade completed"
 }
 
 run_upgrade
