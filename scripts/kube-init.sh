@@ -1,8 +1,9 @@
 #!/bin/bash
 
-exec   > >(tee -ia /var/log/kube-init.log)
-exec  2> >(tee -ia /var/log/kube-init.log >& 2)
-exec 19>> /var/log/kube-init.log
+logfile="/var/log/kube-init-$(date +%Y-%m-%d-%H-%M-%S).log"
+exec   > >(tee -ia "$logfile")
+exec  2> >(tee -ia "$logfile" >& 2)
+exec 19>> "$logfile"
 
 export BASH_XTRACEFD="19"
 set -ex

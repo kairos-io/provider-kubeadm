@@ -3,8 +3,9 @@
 set -x
 trap 'echo -n $(date)' DEBUG
 
-exec   > >(tee -ia /var/log/kube-reconfigure.log)
-exec  2> >(tee -ia /var/log/kube-reconfigure.log >& 2)
+logfile="/var/log/kube-reconfigure-$(date +%Y-%m-%d-%H-%M-%S).log"
+exec   > >(tee -ia "$logfile")
+exec  2> >(tee -ia "$logfile" >& 2)
 
 info() {
     echo "[INFO] " "$@"
