@@ -1,5 +1,5 @@
 #!/bin/bash
-logfile="var/log/kube-upgrade-$(date +%Y-%m-%d_%H-%M-%S).log"
+logfile="/var/log/kube-upgrade-$(date +%Y-%m-%d_%H-%M-%S).log"
 exec   > >(tee -ia $logfile)
 exec  2> >(tee -ia $logfile >& 2)
 exec 19>> $logfile
