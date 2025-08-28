@@ -1,10 +1,10 @@
-package main
+package unit
 
 import (
 	"testing"
 
-	. "github.com/onsi/gomega"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	. "github.com/onsi/gomega"
 )
 
 // TestClusterContextCreation tests cluster context creation logic
@@ -12,14 +12,14 @@ func TestClusterContextCreation(t *testing.T) {
 	_ = NewWithT(t)
 
 	tests := []struct {
-		name                           string
-		cluster                        clusterplugin.Cluster
-		expectedRootPath              string
-		expectedNodeRole              string
-		expectedControlPlaneHost      string
-		expectedClusterToken          string
+		name                            string
+		cluster                         clusterplugin.Cluster
+		expectedRootPath                string
+		expectedNodeRole                string
+		expectedControlPlaneHost        string
+		expectedClusterToken            string
 		expectedContainerdServiceFolder string
-		expectedLocalImagesPath       string
+		expectedLocalImagesPath         string
 	}{
 		{
 			name: "basic_init_appliance_mode",
@@ -29,12 +29,12 @@ func TestClusterContextCreation(t *testing.T) {
 				ClusterToken:     "abcdef.1234567890123456",
 				Options:          `clusterConfiguration: {}`,
 			},
-			expectedRootPath:               "/",
-			expectedNodeRole:               "init",
-			expectedControlPlaneHost:       "10.0.0.1",
-			expectedClusterToken:           "abcdef:1234567890123456", // Transformed token
+			expectedRootPath:                "/",
+			expectedNodeRole:                "init",
+			expectedControlPlaneHost:        "10.0.0.1",
+			expectedClusterToken:            "abcdef:1234567890123456", // Transformed token
 			expectedContainerdServiceFolder: "containerd",
-			expectedLocalImagesPath:        "/opt/content/images",
+			expectedLocalImagesPath:         "/opt/content/images",
 		},
 		{
 			name: "agent_mode_with_custom_root",
@@ -46,12 +46,12 @@ func TestClusterContextCreation(t *testing.T) {
 					"cluster_root_path": "/persistent/spectro",
 				},
 			},
-			expectedRootPath:               "/persistent/spectro",
-			expectedNodeRole:               "controlplane", // RoleJoin maps to controlplane
-			expectedControlPlaneHost:       "192.168.1.100",
-			expectedClusterToken:           "token:with:dots:1234567890123456",
+			expectedRootPath:                "/persistent/spectro",
+			expectedNodeRole:                "controlplane", // RoleJoin maps to controlplane
+			expectedControlPlaneHost:        "192.168.1.100",
+			expectedClusterToken:            "token:with:dots:1234567890123456",
 			expectedContainerdServiceFolder: "containerd",
-			expectedLocalImagesPath:        "/persistent/spectro/opt/content/images",
+			expectedLocalImagesPath:         "/persistent/spectro/opt/content/images",
 		},
 	}
 
@@ -75,11 +75,11 @@ func TestClusterContextCreation(t *testing.T) {
 // Mock cluster context for testing
 type mockClusterContext struct {
 	rootPath                string
-	nodeRole               string
-	controlPlaneHost       string
-	clusterToken           string
+	nodeRole                string
+	controlPlaneHost        string
+	clusterToken            string
 	containerdServiceFolder string
-	localImagesPath        string
+	localImagesPath         string
 }
 
 func createMockClusterContext(cluster clusterplugin.Cluster) mockClusterContext {
@@ -106,11 +106,11 @@ func createMockClusterContext(cluster clusterplugin.Cluster) mockClusterContext 
 
 	return mockClusterContext{
 		rootPath:                rootPath,
-		nodeRole:               nodeRole,
-		controlPlaneHost:       cluster.ControlPlaneHost,
-		clusterToken:           transformTokenForTest(cluster.ClusterToken),
+		nodeRole:                nodeRole,
+		controlPlaneHost:        cluster.ControlPlaneHost,
+		clusterToken:            transformTokenForTest(cluster.ClusterToken),
 		containerdServiceFolder: containerdServiceFolder,
-		localImagesPath:        localImagesPath,
+		localImagesPath:         localImagesPath,
 	}
 }
 

@@ -1,4 +1,4 @@
-package main
+package unit
 
 import (
 	"testing"
@@ -11,15 +11,15 @@ func TestStageGeneration(t *testing.T) {
 	_ = NewWithT(t)
 
 	tests := []struct {
-		name                string
-		rootPath           string
-		expectedStageName  string
-		expectedCommands   []string
-		expectedIf         string
+		name              string
+		rootPath          string
+		expectedStageName string
+		expectedCommands  []string
+		expectedIf        string
 	}{
 		{
-			name:     "appliance_mode_pre_commands",
-			rootPath: "/",
+			name:              "appliance_mode_pre_commands",
+			rootPath:          "/",
 			expectedStageName: "Run Pre Kubeadm Commands",
 			expectedCommands: []string{
 				"/bin/bash /opt/kubeadm/scripts/kube-pre-init.sh /",
@@ -27,8 +27,8 @@ func TestStageGeneration(t *testing.T) {
 			expectedIf: "",
 		},
 		{
-			name:     "agent_mode_pre_commands",
-			rootPath: "/persistent/spectro",
+			name:              "agent_mode_pre_commands",
+			rootPath:          "/persistent/spectro",
 			expectedStageName: "Run Pre Kubeadm Commands",
 			expectedCommands: []string{
 				"/bin/bash /persistent/spectro/opt/kubeadm/scripts/kube-pre-init.sh /persistent/spectro",

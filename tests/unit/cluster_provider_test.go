@@ -1,10 +1,10 @@
-package main
+package unit
 
 import (
 	"testing"
 
-	. "github.com/onsi/gomega"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	. "github.com/onsi/gomega"
 )
 
 // TestClusterProviderInputValidation tests cluster provider input validation
@@ -12,10 +12,10 @@ func TestClusterProviderInputValidation(t *testing.T) {
 	_ = NewWithT(t)
 
 	tests := []struct {
-		name                string
-		cluster             clusterplugin.Cluster
-		expectedValid       bool
-		expectedName        string
+		name          string
+		cluster       clusterplugin.Cluster
+		expectedValid bool
+		expectedName  string
 	}{
 		{
 			name: "basic_init_cluster_v1beta3",

@@ -1,4 +1,4 @@
-package main
+package unit
 
 import (
 	"testing"
@@ -12,11 +12,11 @@ func TestComprehensiveCoverageVerification(t *testing.T) {
 
 	// Define the complete coverage matrix
 	coverageMatrix := CoverageMatrix{
-		KubeadmVersions:    []string{"v1beta3", "v1beta4"},
-		NodeRoles:          []string{"init", "controlplane", "worker"},
-		EnvironmentModes:   []string{"agent", "appliance"},
-		ProxyConfigs:       []string{"enabled", "disabled"},
-		ContainerRuntimes:  []string{"containerd", "spectro-containerd"},
+		KubeadmVersions:   []string{"v1beta3", "v1beta4"},
+		NodeRoles:         []string{"init", "controlplane", "worker"},
+		EnvironmentModes:  []string{"agent", "appliance"},
+		ProxyConfigs:      []string{"enabled", "disabled"},
+		ContainerRuntimes: []string{"containerd", "spectro-containerd"},
 		AdditionalScenarios: []string{
 			"empty_user_options",
 			"invalid_configurations",
@@ -46,7 +46,7 @@ func TestComprehensiveCoverageVerification(t *testing.T) {
 		},
 		"role_paths_test.go": {
 			"init role stage generation",
-			"controlplane role stage generation", 
+			"controlplane role stage generation",
 			"worker role stage generation",
 			"role-specific command generation",
 			"role-specific configuration differences",
@@ -87,7 +87,7 @@ func TestComprehensiveCoverageVerification(t *testing.T) {
 		},
 		"stages_pre_test.go": {
 			"GetPreKubeadmCommandStages function",
-			"GetPreKubeadmSwapOffDisableStage function", 
+			"GetPreKubeadmSwapOffDisableStage function",
 			"GetPreKubeadmImportLocalImageStage function",
 			"GetPreKubeadmImportCoreK8sImageStage function",
 		},
@@ -153,51 +153,51 @@ func TestAllCodePathsCovered(t *testing.T) {
 	// Define all code paths that should be covered
 	codePaths := map[string]bool{
 		// Main function paths
-		"clusterProvider_v1beta3_branch":     true,
-		"clusterProvider_v1beta4_branch":     true,
-		"CreateClusterContext_all_fields":    true,
-		"getV1Beta3FinalStage_init":         true,
-		"getV1Beta3FinalStage_join":         true,
-		"getV1Beta4FinalStage_init":         true,
-		"getV1Beta4FinalStage_join":         true,
+		"clusterProvider_v1beta3_branch":  true,
+		"clusterProvider_v1beta4_branch":  true,
+		"CreateClusterContext_all_fields": true,
+		"getV1Beta3FinalStage_init":       true,
+		"getV1Beta3FinalStage_join":       true,
+		"getV1Beta4FinalStage_init":       true,
+		"getV1Beta4FinalStage_join":       true,
 
 		// Stages package paths
-		"GetPreKubeadmCommandStages":         true,
-		"GetPreKubeadmSwapOffDisableStage":   true,
-		"GetPreKubeadmImportLocalImageStage": true,
+		"GetPreKubeadmCommandStages":           true,
+		"GetPreKubeadmSwapOffDisableStage":     true,
+		"GetPreKubeadmImportLocalImageStage":   true,
 		"GetPreKubeadmImportCoreK8sImageStage": true,
-		"GetPreKubeadmProxyStage":            true,
+		"GetPreKubeadmProxyStage":              true,
 
 		// Configuration generation paths
-		"kubeadm_init_config_generation":     true,
-		"kubeadm_join_config_generation":     true,
-		"cluster_config_generation":          true,
-		"kubelet_config_generation":          true,
+		"kubeadm_init_config_generation": true,
+		"kubeadm_join_config_generation": true,
+		"cluster_config_generation":      true,
+		"kubelet_config_generation":      true,
 
 		// Environment-specific paths
-		"agent_mode_path_handling":           true,
-		"appliance_mode_path_handling":       true,
-		"custom_cluster_root_path":           true,
-		"local_images_path_handling":         true,
+		"agent_mode_path_handling":     true,
+		"appliance_mode_path_handling": true,
+		"custom_cluster_root_path":     true,
+		"local_images_path_handling":   true,
 
 		// Proxy-specific paths
-		"proxy_enabled_file_generation":      true,
-		"proxy_disabled_handling":            true,
-		"containerd_proxy_config":            true,
-		"spectro_containerd_proxy_config":    true,
-		"kubelet_proxy_env_generation":       true,
+		"proxy_enabled_file_generation":   true,
+		"proxy_disabled_handling":         true,
+		"containerd_proxy_config":         true,
+		"spectro_containerd_proxy_config": true,
+		"kubelet_proxy_env_generation":    true,
 
 		// Error handling paths
-		"missing_kubeadm_binary":             true,
-		"invalid_version_handling":           true,
-		"malformed_user_options":             true,
-		"missing_required_fields":            true,
+		"missing_kubeadm_binary":   true,
+		"invalid_version_handling": true,
+		"malformed_user_options":   true,
+		"missing_required_fields":  true,
 
 		// Edge case paths
-		"empty_configuration_handling":       true,
-		"unicode_character_handling":         true,
-		"boundary_condition_testing":         true,
-		"maximum_configuration_complexity":   true,
+		"empty_configuration_handling":     true,
+		"unicode_character_handling":       true,
+		"boundary_condition_testing":       true,
+		"maximum_configuration_complexity": true,
 	}
 
 	// Verify all identified paths are covered
@@ -215,7 +215,7 @@ func TestAllCodePathsCovered(t *testing.T) {
 	coveragePercentage := float64(coveredPaths) / float64(totalPaths) * 100
 	g.Expect(coveragePercentage).To(Equal(100.0), "Should achieve 100% code path coverage")
 
-	t.Logf("✅ Code path coverage: %.1f%% (%d/%d paths covered)", 
+	t.Logf("✅ Code path coverage: %.1f%% (%d/%d paths covered)",
 		coveragePercentage, coveredPaths, totalPaths)
 }
 
@@ -226,7 +226,7 @@ func TestFunctionCoverageCompleteness(t *testing.T) {
 	// Main package functions that should have unit tests
 	mainFunctions := []string{
 		"clusterProvider",
-		"CreateClusterContext", 
+		"CreateClusterContext",
 		"getV1Beta3FinalStage",
 		"getV1Beta4FinalStage",
 		"getKubeadmPreStages",
@@ -239,7 +239,7 @@ func TestFunctionCoverageCompleteness(t *testing.T) {
 	stagesFunctions := []string{
 		"GetPreKubeadmCommandStages",
 		"GetPreKubeadmSwapOffDisableStage",
-		"GetPreKubeadmImportLocalImageStage", 
+		"GetPreKubeadmImportLocalImageStage",
 		"GetPreKubeadmImportCoreK8sImageStage",
 		"GetPreKubeadmProxyStage",
 		"GetInitYipStagesV1Beta3",

@@ -5,9 +5,9 @@ import (
 
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	. "github.com/onsi/gomega"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	kubeadmapiv4 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
-	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 // TestMutateClusterConfigBeta3Defaults tests the MutateClusterConfigBeta3Defaults function
@@ -17,7 +17,7 @@ func TestMutateClusterConfigBeta3Defaults(t *testing.T) {
 
 		clusterCtx := &domain.ClusterContext{
 			ControlPlaneHost: "10.0.0.1",
-			ClusterToken:    "test-token.1234567890123456",
+			ClusterToken:     "test-token.1234567890123456",
 		}
 
 		clusterConfig := &kubeadmapiv3.ClusterConfiguration{}
@@ -37,7 +37,7 @@ func TestMutateClusterConfigBeta4Defaults(t *testing.T) {
 
 		clusterCtx := &domain.ClusterContext{
 			ControlPlaneHost: "10.0.0.1",
-			ClusterToken:    "test-token.1234567890123456",
+			ClusterToken:     "test-token.1234567890123456",
 		}
 
 		clusterConfig := &kubeadmapiv4.ClusterConfiguration{}
@@ -57,7 +57,7 @@ func TestMutateKubeletDefaults(t *testing.T) {
 
 		clusterCtx := &domain.ClusterContext{
 			ControlPlaneHost: "10.0.0.1",
-			ClusterToken:    "test-token.1234567890123456",
+			ClusterToken:     "test-token.1234567890123456",
 		}
 
 		kubeletConfig := &kubeletv1beta1.KubeletConfiguration{}

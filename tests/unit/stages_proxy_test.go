@@ -1,4 +1,4 @@
-package main
+package unit
 
 import (
 	"testing"
@@ -11,14 +11,14 @@ func TestProxyStageGeneration(t *testing.T) {
 	_ = NewWithT(t)
 
 	tests := []struct {
-		name                           string
-		envConfig                     map[string]string
-		containerdServiceFolderName   string
-		expectedName                  string
-		expectedFileCount             int
-		expectedKubeletPath           string
-		expectedContainerdPath        string
-		expectedPermissions           uint32
+		name                        string
+		envConfig                   map[string]string
+		containerdServiceFolderName string
+		expectedName                string
+		expectedFileCount           int
+		expectedKubeletPath         string
+		expectedContainerdPath      string
+		expectedPermissions         uint32
 	}{
 		{
 			name: "standard_containerd_with_proxy",
