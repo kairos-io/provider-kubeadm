@@ -1,0 +1,113 @@
+cluster:
+  cluster_token: test-cluster-token-1234567890123456
+  control_plane_host: 10.0.0.1
+  role: init
+  config: |
+    clusterConfiguration:
+      apiServer:
+        certSANs:
+        - cluster-test.example.com
+        extraArgs:
+          advertise-address: 0.0.0.0
+          anonymous-auth: "true"
+          audit-log-maxage: "30"
+          audit-log-maxbackup: "10"
+          audit-log-maxsize: "100"
+          audit-log-path: /var/log/apiserver/audit.log
+          audit-policy-file: /etc/kubernetes/audit-policy.yaml
+          authorization-mode: RBAC,Node
+          default-not-ready-toleration-seconds: "60"
+          default-unreachable-toleration-seconds: "60"
+          disable-admission-plugins: AlwaysAdmit
+          enable-admission-plugins: AlwaysPullImages,NamespaceLifecycle,ServiceAccount,NodeRestriction
+          profiling: "false"
+          secure-port: "6443"
+          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
+        extraVolumes:
+        - hostPath: /var/log/apiserver
+          mountPath: /var/log/apiserver
+          name: audit-log
+          pathType: DirectoryOrCreate
+        - hostPath: /etc/kubernetes/audit-policy.yaml
+          mountPath: /etc/kubernetes/audit-policy.yaml
+          name: audit-policy
+          pathType: File
+          readOnly: true
+        timeoutForControlPlane: 10m0s
+      controllerManager:
+        extraArgs:
+          feature-gates: RotateKubeletServerCertificate=true
+          profiling: "false"
+          terminated-pod-gc-threshold: "25"
+          use-service-account-credentials: "true"
+      dns: {}
+      etcd:
+        local:
+          dataDir: /etc/kubernetes/etcd
+          extraArgs:
+            listen-client-urls: https://0.0.0.0:2379
+            max-snapshots: "12"
+            snapshot-count: "50000"
+      kubernetesVersion: v1.30.11
+      networking:
+        podSubnet: 192.168.0.0/16
+        serviceSubnet: 192.169.0.0/16
+      scheduler:
+        extraArgs:
+          profiling: "false"
+    initConfiguration:
+      localAPIEndpoint: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+          event-qps: "0"
+          feature-gates: RotateKubeletServerCertificate=true
+          protect-kernel-defaults: "true"
+          read-only-port: "0"
+          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
+        taints: null
+    joinConfiguration:
+      discovery: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+          event-qps: "0"
+          feature-gates: RotateKubeletServerCertificate=true
+          protect-kernel-defaults: "true"
+          read-only-port: "0"
+          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
+        taints: null
+    kubeletConfiguration:
+      authentication:
+        anonymous: {}
+        webhook:
+          cacheTTL: 0s
+        x509: {}
+      authorization:
+        webhook:
+          cacheAuthorizedTTL: 0s
+          cacheUnauthorizedTTL: 0s
+      containerRuntimeEndpoint: ""
+      cpuManagerReconcilePeriod: 0s
+      evictionPressureTransitionPeriod: 0s
+      fileCheckFrequency: 0s
+      httpCheckFrequency: 0s
+      imageMaximumGCAge: 0s
+      imageMinimumGCAge: 0s
+      logging:
+        flushFrequency: 0
+        options:
+          json:
+            infoBufferSize: "0"
+        verbosity: 0
+      memorySwap: {}
+      nodeStatusReportFrequency: 0s
+      nodeStatusUpdateFrequency: 0s
+      runtimeRequestTimeout: 0s
+      shutdownGracePeriod: 0s
+      shutdownGracePeriodCriticalPods: 0s
+      streamingConnectionIdleTimeout: 0s
+      syncFrequency: 0s
+      volumeStatsAggPeriod: 0s
+  providerConfig:
+    cluster_root_path: /
+  import_local_images: true
+  local_images_path: /opt/content/images

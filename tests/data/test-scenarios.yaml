@@ -1,0 +1,123 @@
+# Test scenarios configuration for provider-kubeadm integration tests
+
+scenarios:
+  # v1beta3 Test Data
+  v1beta3_init:
+    kubeadmVersion: v1.30.11
+    clusterConfiguration:
+      apiServer:
+        certSANs:
+        - cluster-test.example.com
+        extraArgs:
+          advertise-address: 0.0.0.0
+          anonymous-auth: "true"
+          audit-log-maxage: "30"
+          audit-log-maxbackup: "10"
+          audit-log-maxsize: "100"
+          audit-log-path: /var/log/apiserver/audit.log
+          audit-policy-file: /etc/kubernetes/audit-policy.yaml
+        timeoutForControlPlane: 10m0s
+      controllerManager:
+        extraArgs:
+          feature-gates: RotateKubeletServerCertificate=true
+          profiling: "false"
+      networking:
+        podSubnet: 192.168.0.0/16
+        serviceSubnet: 192.169.0.0/16
+    initConfiguration:
+      localAPIEndpoint: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+          event-qps: "0"
+          feature-gates: RotateKubeletServerCertificate=true
+          node-ip: "10.0.0.1"
+    joinConfiguration:
+      discovery: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+          event-qps: "0"
+          feature-gates: RotateKubeletServerCertificate=true
+          node-ip: "10.0.0.1"
+    kubeletConfiguration:
+      authentication:
+        anonymous: {}
+        webhook:
+          cacheTTL: 0s
+
+  # v1beta4 Test Data  
+  v1beta4_init:
+    kubeadmVersion: v1.31.0
+    clusterConfiguration:
+      apiServer:
+        certSANs:
+        - cluster-test.example.com
+        extraArgs:
+          advertise-address: 0.0.0.0
+          anonymous-auth: "true"
+          audit-log-maxage: "30"
+        timeoutForControlPlane: 10m0s
+      controllerManager:
+        extraArgs:
+          feature-gates: RotateKubeletServerCertificate=true
+          profiling: "false"
+      networking:
+        podSubnet: 192.168.0.0/16
+        serviceSubnet: 192.169.0.0/16
+    initConfiguration:
+      localAPIEndpoint: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+        - name: event-qps
+          value: "0"
+        - name: feature-gates
+          value: RotateKubeletServerCertificate=true
+        - name: node-ip
+          value: "10.0.0.1"
+    joinConfiguration:
+      discovery: {}
+      nodeRegistration:
+        kubeletExtraArgs:
+        - name: event-qps
+          value: "0"
+        - name: feature-gates
+          value: RotateKubeletServerCertificate=true
+        - name: node-ip
+          value: "10.0.0.1"
+    kubeletConfiguration:
+      authentication:
+        anonymous: {}
+        webhook:
+          cacheTTL: 0s
+
+# Expected stage configurations for validation
+expected_stages:
+  init_stages: 10  # 5 pre-stages + 5 init-specific stages
+  controlplane_stages: 9  # 5 pre-stages + 4 join stages (with cluster config)
+  worker_stages: 7  # 5 pre-stages + 2 join stages (no cluster config)
+
+# Pre-stage names (common to all roles)
+pre_stage_names:
+  - "Set proxy env"
+  - "Run Pre Kubeadm Commands"
+  - "Run Pre Kubeadm Disable SwapOff"
+  - "Run Load Kube Images"
+  - "Run Import Local Images"
+
+# Init-specific stage names
+init_stage_names:
+  - "Generate Kubeadm Init Config File"
+  - "Run Kubeadm Init"
+  - "Run Post Kubeadm Init"
+  - "Generate Cluster Config File"
+  - "Generate Kubelet Config File"
+  - "Run Kubeadm Init Upgrade"
+  - "Run Kubeadm Reconfiguration"
+
+# Join-specific stage names
+join_stage_names:
+  - "Generate Kubeadm Join Config File"
+  - "Run Kubeadm Join"
+  - "Generate Cluster Config File"  # Only for controlplane
+  - "Generate Kubelet Config File"  # Only for controlplane
+  - "Run Kubeadm Join Upgrade"
+  - "Run Kubeadm Join Reconfiguration"

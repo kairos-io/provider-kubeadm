@@ -1,0 +1,191 @@
+package main
+
+import (
+	"testing"
+
+	. "github.com/onsi/gomega"
+	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
+)
+
+// TestCreateClusterContext tests the CreateClusterContext function
+func TestCreateClusterContext(t *testing.T) {
+	g := NewWithT(t)
+
+	tests := []struct {
+		name                            string
+		cluster                         clusterplugin.Cluster
+		expectedRootPath                string
+		expectedNodeRole                string
+		expectedControlPlaneHost        string
+		expectedClusterToken            string
+		expectedContainerdServiceFolder string
+		expectedLocalImagesPath         string
+		validateEnvConfig               func(*testing.T, map[string]string)
+	}{
+		{
+			name: "basic_init_appliance_mode",
+			cluster: clusterplugin.Cluster{
+				Role:             clusterplugin.RoleInit,
+				ControlPlaneHost: "10.0.0.1",
+				ClusterToken:     "abcdef.1234567890123456",
+				Options:          `clusterConfiguration: {}`,
+				Env: map[string]string{
+					"TEST_VAR": "test_value",
+				},
+			},
+			expectedRootPath:                "/",
+			expectedNodeRole:                "init",
+			expectedControlPlaneHost:        "10.0.0.1",
+			expectedClusterToken:            "abcdef:1234567890123456", // Transformed token
+			expectedContainerdServiceFolder: "containerd",
+			expectedLocalImagesPath:         "/opt/content/images",
+			validateEnvConfig: func(t *testing.T, env map[string]string) {
+				g := NewWithT(t)
+				g.Expect(env).To(HaveKeyWithValue("TEST_VAR", "test_value"))
+			},
+		},
+		{
+			name: "controlplane_mode_with_custom_root",
+			cluster: clusterplugin.Cluster{
+				Role:             clusterplugin.RoleControlPlane,
+				ControlPlaneHost: "192.168.1.100",
+				ClusterToken:     "token.with.dots.1234567890123456",
+				ProviderOptions: map[string]string{
+					"cluster_root_path": "/persistent/spectro",
+				},
+			},
+			expectedRootPath:                "/persistent/spectro",
+			expectedNodeRole:                "controlplane",
+			expectedControlPlaneHost:        "192.168.1.100",
+			expectedClusterToken:            "token:with:dots:1234567890123456",
+			expectedContainerdServiceFolder: "containerd",
+			expectedLocalImagesPath:         "/persistent/spectro/opt/content/images",
+		},
+		{
+			name: "spectro_containerd_with_custom_images",
+			cluster: clusterplugin.Cluster{
+				Role:             clusterplugin.RoleWorker,
+				ControlPlaneHost: "master.k8s.local",
+				ClusterToken:     "special-token.1234567890123456",
+				LocalImagesPath:  "/custom/images/path",
+				ProviderOptions: map[string]string{
+					"spectro-containerd-service-name": "true",
+					"cluster_root_path":               "/mnt/custom",
+				},
+				Env: map[string]string{
+					"HTTP_PROXY":  "http://proxy.corp.com:8080",
+					"HTTPS_PROXY": "https://proxy.corp.com:8080",
+					"NO_PROXY":    "localhost,127.0.0.1",
+				},
+			},
+			expectedRootPath:                "/mnt/custom",
+			expectedNodeRole:                "worker",
+			expectedControlPlaneHost:        "master.k8s.local",
+			expectedClusterToken:            "special-token:1234567890123456",
+			expectedContainerdServiceFolder: "spectro-containerd",
+			expectedLocalImagesPath:         "/custom/images/path",
+			validateEnvConfig: func(t *testing.T, env map[string]string) {
+				g := NewWithT(t)
+				g.Expect(env).To(HaveKeyWithValue("HTTP_PROXY", "http://proxy.corp.com:8080"))
+				g.Expect(env).To(HaveKeyWithValue("HTTPS_PROXY", "https://proxy.corp.com:8080"))
+				g.Expect(env).To(HaveKeyWithValue("NO_PROXY", "localhost,127.0.0.1"))
+			},
+		},
+		{
+			name: "empty_local_images_path_default_behavior",
+			cluster: clusterplugin.Cluster{
+				Role:             clusterplugin.RoleInit,
+				ControlPlaneHost: "10.0.0.1",
+				ClusterToken:     "test.1234567890123456",
+				ProviderOptions: map[string]string{
+					"cluster_root_path": "/custom/root",
+				},
+			},
+			expectedRootPath:                "/custom/root",
+			expectedNodeRole:                "init",
+			expectedControlPlaneHost:        "10.0.0.1",
+			expectedClusterToken:            "test:1234567890123456",
+			expectedContainerdServiceFolder: "containerd",
+			expectedLocalImagesPath:         "/custom/root/opt/content/images",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			// Execute function under test
+			result := CreateClusterContext(tt.cluster)
+
+			// Basic validations
+			g.Expect(result.RootPath).To(Equal(tt.expectedRootPath))
+			g.Expect(result.NodeRole).To(Equal(tt.expectedNodeRole))
+			g.Expect(result.ControlPlaneHost).To(Equal(tt.expectedControlPlaneHost))
+			// The token is transformed using SHA256 hash, so we just check it's not empty and has the expected format
+			g.Expect(result.ClusterToken).ToNot(BeEmpty())
+			g.Expect(result.ClusterToken).To(MatchRegexp(`^[a-f0-9]{6}\.[a-f0-9]{16}$`))
+			g.Expect(result.ContainerdServiceFolderName).To(Equal(tt.expectedContainerdServiceFolder))
+			g.Expect(result.LocalImagesPath).To(Equal(tt.expectedLocalImagesPath))
+
+			// Environment validation
+			if tt.validateEnvConfig != nil {
+				tt.validateEnvConfig(t, result.EnvConfig)
+			}
+		})
+	}
+}
+
+// TestGetContainerdServiceFolderName tests the getContainerdServiceFolderName function
+func TestGetContainerdServiceFolderName(t *testing.T) {
+	g := NewWithT(t)
+
+	tests := []struct {
+		name     string
+		options  map[string]string
+		expected string
+	}{
+		{
+			name:     "default_containerd",
+			options:  map[string]string{},
+			expected: "containerd",
+		},
+		{
+			name: "spectro_containerd",
+			options: map[string]string{
+				"spectro-containerd-service-name": "true",
+			},
+			expected: "spectro-containerd",
+		},
+		{
+			name: "other_options_should_not_affect",
+			options: map[string]string{
+				"other_option":      "value",
+				"cluster_root_path": "/custom/path",
+			},
+			expected: "containerd",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getContainerdServiceFolderName(tt.options)
+			g.Expect(result).To(Equal(tt.expected))
+		})
+	}
+}
+
+// TestSetClusterSubnetCtx tests the setClusterSubnetCtx function
+func TestSetClusterSubnetCtx(t *testing.T) {
+	g := NewWithT(t)
+
+	clusterCtx := &domain.ClusterContext{}
+	serviceSubnet := "10.96.0.0/12"
+	podSubnet := "10.244.0.0/16"
+
+	setClusterSubnetCtx(clusterCtx, serviceSubnet, podSubnet)
+
+	g.Expect(clusterCtx.ServiceCidr).To(Equal(serviceSubnet))
+	g.Expect(clusterCtx.ClusterCidr).To(Equal(podSubnet))
+}
