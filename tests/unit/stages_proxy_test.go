@@ -135,7 +135,7 @@ type mockProxyStage struct {
 	permissions    uint32
 }
 
-func generateMockProxyStage(envConfig map[string]string, containerdServiceFolderName string) mockProxyStage {
+func generateMockProxyStage(_ map[string]string, containerdServiceFolderName string) mockProxyStage {
 	return mockProxyStage{
 		name:           "Set proxy env",
 		fileCount:      2,

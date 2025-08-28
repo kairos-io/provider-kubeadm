@@ -18,13 +18,13 @@ import (
 // Using TestScenario from test_helpers.go
 
 // ExpectedStage represents validation expectations for YIP stages
-type ExpectedStage struct {
-	name         string
-	hasFiles     bool
-	hasCommands  bool
-	fileCount    int
-	commandCount int
-}
+// type ExpectedStage struct {
+// 	name         string
+// 	hasFiles     bool
+// 	hasCommands  bool
+// 	fileCount    int
+// 	commandCount int
+// }
 
 func TestProviderKubeadmYipStageGeneration(t *testing.T) {
 	_ = NewWithT(t)
@@ -616,17 +616,9 @@ func validateClusterInput(t *testing.T, cluster clusterplugin.Cluster, tt TestSc
 
 // setupTestFileSystem is not needed for static testing
 // We focus on validating input logic rather than filesystem interactions
-func setupTestFileSystem(kubeadmVersion, environmentMode string, localImages bool) (vfs.FS, func(), error) {
+func setupTestFileSystem(_ string, _ string, _ bool) (vfs.FS, func(), error) {
 	// Return a simple mock for static testing
 	return nil, func() {}, nil
-}
-
-func createMockKubeadmBinary(version string) []byte {
-	return []byte(fmt.Sprintf("#!/bin/bash\nif [ \"$1\" = \"version\" ] && [ \"$2\" = \"-o\" ] && [ \"$3\" = \"short\" ]; then\n  echo \"v%s\"\nfi\n", version))
-}
-
-func mockScript(scriptType string) []byte {
-	return []byte(fmt.Sprintf("#!/bin/bash\n# Mock %s script\necho \"Executing %s\"\nexit 0\n", scriptType, scriptType))
 }
 
 func createClusterInput(scenario TestScenario) clusterplugin.Cluster {
@@ -762,7 +754,7 @@ kubeletConfiguration:
 	}
 }
 
-func validateYipStages(t *testing.T, actualConfig yip.YipConfig, scenario TestScenario) {
+func ValidateYipStages(t *testing.T, actualConfig yip.YipConfig, scenario TestScenario) {
 	g := NewWithT(t)
 
 	// Validate overall structure
@@ -965,10 +957,10 @@ func setupGlobalTestEnvironment() {
 	log.InitLogger("/tmp/provider-kubeadm-test.log")
 
 	// Set test-friendly defaults
-	os.Setenv("TEST_MODE", "true")
+	_ = os.Setenv("TEST_MODE", "true")
 }
 
 func cleanupGlobalTestEnvironment() {
 	// Cleanup test environment
-	os.Unsetenv("TEST_MODE")
+	_ = os.Unsetenv("TEST_MODE")
 }

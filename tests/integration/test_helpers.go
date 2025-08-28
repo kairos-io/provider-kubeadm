@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	yip "github.com/mudler/yip/pkg/schema"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 // Helper functions
@@ -30,7 +30,6 @@ type TestScenario struct {
 	name             string
 	kubeadmVersion   string
 	nodeRole         string
-	envMode          string
 	environmentMode  string
 	proxyConfig      string
 	containerRuntime string
@@ -51,13 +50,13 @@ type TestValidationResult struct {
 // ComprehensiveYipValidator provides detailed validation of YIP configurations
 type ComprehensiveYipValidator struct {
 	t testing.TB
-	g *WithT
+	g *gomega.WithT
 }
 
 func NewYipValidator(t testing.TB) *ComprehensiveYipValidator {
 	return &ComprehensiveYipValidator{
 		t: t,
-		g: NewWithT(t),
+		g: gomega.NewWithT(t),
 	}
 }
 
@@ -69,8 +68,8 @@ func (v *ComprehensiveYipValidator) ValidateComprehensive(actualConfig yip.YipCo
 	}
 
 	// Basic structure validation
-	v.g.Expect(actualConfig.Name).To(Equal("Kubeadm Kairos Cluster Provider"))
-	v.g.Expect(actualConfig.Stages).To(HaveKey("boot.before"))
+	v.g.Expect(actualConfig.Name).To(gomega.Equal("Kubeadm Kairos Cluster Provider"))
+	v.g.Expect(actualConfig.Stages).To(gomega.HaveKey("boot.before"))
 
 	stages := actualConfig.Stages["boot.before"]
 	result.ActualStageCount = len(stages)

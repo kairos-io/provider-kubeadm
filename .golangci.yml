@@ -21,11 +21,10 @@ linters:
 
 run:
   timeout: 5m
-  go: "1.24"
-  skip-dirs:
-    - tests
 
 issues:
+  exclude-dirs:
+    - tests
   exclude-rules:
     # Exclude test files from certain checks
     - path: "_test\\.go"
