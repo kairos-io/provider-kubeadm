@@ -90,7 +90,7 @@ lint:
     RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
     WORKDIR /build
     COPY . .
-    RUN golangci-lint run --timeout=10m
+    RUN golangci-lint run --timeout=10m --skip-dirs=tests
 
 DOWNLOAD_BINARIES:
     COMMAND

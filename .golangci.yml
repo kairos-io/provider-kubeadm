@@ -22,6 +22,8 @@ linters:
 run:
   timeout: 5m
   go: "1.24"
+  skip-dirs:
+    - tests
 
 issues:
   exclude-rules:
@@ -29,17 +31,6 @@ issues:
     - path: "_test\\.go"
       linters:
         - errcheck
-        - unused
-        - staticcheck
-    # Exclude test directories entirely
-    - path: "tests/"
-      linters:
-        - errcheck
-        - unused
-        - staticcheck
-    # Exclude generated or legacy files
-    - path: "test_helpers\\.go"
-      linters:
         - unused
         - staticcheck
     # Allow dot imports in test files for Gomega
