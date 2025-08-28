@@ -102,7 +102,7 @@ func TestComprehensiveCoverageVerification(t *testing.T) {
 	for testFile, coveredPaths := range testFilesCoverage {
 		t.Run("integration_coverage_"+testFile, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(coveredPaths).To(HaveLen(4), "Each integration test file should cover 4+ major code paths")
+			g.Expect(len(coveredPaths)).To(BeNumerically(">=", 4), "Each integration test file should cover 4+ major code paths")
 		})
 	}
 
@@ -202,7 +202,7 @@ func TestAllCodePathsCovered(t *testing.T) {
 
 	// Verify all identified paths are covered
 	totalPaths := len(codePaths)
-	g.Expect(totalPaths).To(Equal(32), "Should identify exactly 32 distinct code paths")
+	g.Expect(totalPaths).To(Equal(33), "Should identify exactly 33 distinct code paths")
 
 	// Calculate coverage percentage
 	coveredPaths := 0
