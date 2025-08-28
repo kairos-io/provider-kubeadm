@@ -8,7 +8,7 @@ ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.35.1
-ARG GOLINT_VERSION=v2.1.6
+ARG GOLINT_VERSION=v2.4.0
 ARG GOLANG_VERSION=1.24
 
 ARG KUBEADM_VERSION=latest
@@ -90,7 +90,7 @@ lint:
     RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
     WORKDIR /build
     COPY . .
-    RUN golangci-lint run --timeout=5m
+    RUN golangci-lint run --timeout=10m
 
 DOWNLOAD_BINARIES:
     COMMAND

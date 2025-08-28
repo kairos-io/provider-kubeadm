@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"github.com/spf13/afero"
+	"github.com/twpayne/go-vfs/v5"
 	"gopkg.in/yaml.v3"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
@@ -536,13 +536,13 @@ func TestProviderKubeadmErrorScenarios(t *testing.T) {
 
 	errorTests := []struct {
 		name          string
-		setupFS       func() (afero.Fs, func(), error)
+		setupFS       func() (vfs.FS, func(), error)
 		clusterInput  clusterplugin.Cluster
 		expectedError string
 	}{
 		{
 			name: "kubeadm_binary_missing",
-			setupFS: func() (afero.Fs, func(), error) {
+			setupFS: func() (vfs.FS, func(), error) {
 				// Return a simple mock for static testing
 				return nil, func() {}, nil
 			},
@@ -555,7 +555,7 @@ func TestProviderKubeadmErrorScenarios(t *testing.T) {
 		},
 		{
 			name: "invalid_user_options_yaml",
-			setupFS: func() (afero.Fs, func(), error) {
+			setupFS: func() (vfs.FS, func(), error) {
 				return setupTestFileSystem("1.30.11", "appliance", true)
 			},
 			clusterInput: clusterplugin.Cluster{
@@ -616,7 +616,7 @@ func validateClusterInput(t *testing.T, cluster clusterplugin.Cluster, tt TestSc
 
 // setupTestFileSystem is not needed for static testing
 // We focus on validating input logic rather than filesystem interactions
-func setupTestFileSystem(kubeadmVersion, environmentMode string, localImages bool) (afero.Fs, func(), error) {
+func setupTestFileSystem(kubeadmVersion, environmentMode string, localImages bool) (vfs.FS, func(), error) {
 	// Return a simple mock for static testing
 	return nil, func() {}, nil
 }

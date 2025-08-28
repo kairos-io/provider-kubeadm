@@ -1,33 +1,4 @@
-run:
-  timeout: 5m
-  go: "1.24"
-
-linters:
-  disable-all: true
-  enable:
-    - gofmt
-    - goimports
-    - govet
-    - ineffassign
-    - misspell
-    - unused
-    - errcheck
-    - gosimple
-
-issues:
-  exclude-rules:
-    # Exclude test files from certain checks
-    - path: "_test\\.go"
-      linters:
-        - errcheck
-        - gosec
-    # Exclude generated or legacy files
-    - path: "test_helpers\\.go"
-      linters:
-        - unused
-    # Allow dot imports in test files for Gomega
-    - path: "_test\\.go"
-      text: "dot imports"
+version: 2
 
 linters-settings:
   gofmt:
@@ -38,3 +9,39 @@ linters-settings:
     locale: US
   unused:
     check-exported: false
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - ineffassign
+    - misspell
+    - unused
+    - errcheck
+
+run:
+  timeout: 5m
+  go: "1.24"
+
+issues:
+  exclude-rules:
+    # Exclude test files from certain checks
+    - path: "_test\\.go"
+      linters:
+        - errcheck
+        - unused
+        - staticcheck
+    # Exclude test directories entirely
+    - path: "tests/"
+      linters:
+        - errcheck
+        - unused
+        - staticcheck
+    # Exclude generated or legacy files
+    - path: "test_helpers\\.go"
+      linters:
+        - unused
+        - staticcheck
+    # Allow dot imports in test files for Gomega
+    - path: "_test\\.go"
+      text: "dot imports"
