@@ -1,22 +1,22 @@
-package main
+package integration
 
 import (
 	"fmt"
 	"testing"
 
-	. "github.com/onsi/gomega"
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
+	. "github.com/onsi/gomega"
 )
 
 // TestEnvironmentModePathHandling tests agent vs appliance mode path handling
 func TestEnvironmentModePathHandling(t *testing.T) {
 	environmentTests := []struct {
-		name                  string
-		environmentMode       string
-		clusterRootPath       string
-		expectedRootPath      string
-		expectedBinaryPaths   []string
-		expectedConfigPaths   []string
+		name                string
+		environmentMode     string
+		clusterRootPath     string
+		expectedRootPath    string
+		expectedBinaryPaths []string
+		expectedConfigPaths []string
 	}{
 		{
 			name:                "appliance_mode_standard_paths",
@@ -67,18 +67,18 @@ func TestEnvironmentModePathHandling(t *testing.T) {
 // validatePathConstruction tests path construction logic without external dependencies
 func validatePathConstruction(t *testing.T, cluster clusterplugin.Cluster, expectedRootPath string) {
 	g := NewWithT(t)
-	
+
 	// Test that the cluster root path is extracted correctly
 	rootPath := getClusterRootPath(cluster)
 	g.Expect(rootPath).To(Equal(expectedRootPath))
-	
+
 	// Test path construction for various components
 	expectedPaths := []string{
 		fmt.Sprintf("%s/usr/bin/kubeadm", expectedRootPath),
 		fmt.Sprintf("%s/opt/kubeadm/scripts/kube-init.sh", expectedRootPath),
 		fmt.Sprintf("%s/opt/kubeadm/kubeadm.yaml", expectedRootPath),
 	}
-	
+
 	// Validate that paths are constructed correctly
 	for _, path := range expectedPaths {
 		g.Expect(path).To(ContainSubstring(expectedRootPath))
@@ -96,16 +96,16 @@ func getClusterRootPath(cluster clusterplugin.Cluster) string {
 // TestContainerdServiceFolderDetection tests service folder detection based on environment
 func TestContainerdServiceFolderDetection(t *testing.T) {
 	serviceTests := []struct {
-		name                    string
-		providerOptions         map[string]string
-		expectedServiceFolder   string
-		expectedProxyFilePath   string
+		name                  string
+		providerOptions       map[string]string
+		expectedServiceFolder string
+		expectedProxyFilePath string
 	}{
 		{
-			name:                    "standard_containerd_service",
-			providerOptions:         map[string]string{},
-			expectedServiceFolder:   "containerd",
-			expectedProxyFilePath:   "/run/systemd/system/containerd.service.d/http-proxy.conf",
+			name:                  "standard_containerd_service",
+			providerOptions:       map[string]string{},
+			expectedServiceFolder: "containerd",
+			expectedProxyFilePath: "/run/systemd/system/containerd.service.d/http-proxy.conf",
 		},
 		{
 			name: "spectro_containerd_service",
@@ -143,11 +143,11 @@ func getContainerdServiceFolderName(options map[string]string) string {
 // TestLocalImagesPathHandling tests local images path handling
 func TestLocalImagesPathHandling(t *testing.T) {
 	imagesTests := []struct {
-		name                 string
-		environmentMode      string
-		clusterRootPath      string
-		localImagesPath      string
-		expectedImagesPath   string
+		name               string
+		environmentMode    string
+		clusterRootPath    string
+		localImagesPath    string
+		expectedImagesPath string
 	}{
 		{
 			name:               "appliance_default_images_path",
@@ -203,7 +203,7 @@ func getLocalImagesPath(cluster clusterplugin.Cluster) string {
 	if cluster.LocalImagesPath != "" {
 		return cluster.LocalImagesPath
 	}
-	
+
 	rootPath := getClusterRootPath(cluster)
 	if rootPath == "/" {
 		return "/opt/content/images"

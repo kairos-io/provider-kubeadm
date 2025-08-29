@@ -1,34 +1,62 @@
-package main
+package integration
 
 import (
 	"fmt"
 	"strings"
 	"testing"
 
-	. "github.com/onsi/gomega"
 	yip "github.com/mudler/yip/pkg/schema"
+	"github.com/onsi/gomega"
 )
+
+// Helper functions
+func getStageNames(stages []yip.Stage) []string {
+	names := make([]string, len(stages))
+	for i, stage := range stages {
+		names[i] = stage.Name
+	}
+	return names
+}
+
+func getRootPath(envMode string) string {
+	if envMode == "agent" {
+		return "/persistent/spectro"
+	}
+	return "/"
+}
+
+// TestScenario represents a test configuration scenario
+type TestScenario struct {
+	name             string
+	kubeadmVersion   string
+	nodeRole         string
+	environmentMode  string
+	proxyConfig      string
+	containerRuntime string
+	localImages      string
+	expectedStages   int
+}
 
 // TestValidationResult holds validation results for detailed reporting
 type TestValidationResult struct {
-	Scenario          TestScenario
-	ActualStageCount  int
+	Scenario           TestScenario
+	ActualStageCount   int
 	ExpectedStageCount int
-	MissingStages     []string
-	UnexpectedStages  []string
-	ValidationErrors  []string
+	MissingStages      []string
+	UnexpectedStages   []string
+	ValidationErrors   []string
 }
 
 // ComprehensiveYipValidator provides detailed validation of YIP configurations
 type ComprehensiveYipValidator struct {
 	t testing.TB
-	g *WithT
+	g *gomega.WithT
 }
 
 func NewYipValidator(t testing.TB) *ComprehensiveYipValidator {
 	return &ComprehensiveYipValidator{
 		t: t,
-		g: NewWithT(t),
+		g: gomega.NewWithT(t),
 	}
 }
 
@@ -40,8 +68,8 @@ func (v *ComprehensiveYipValidator) ValidateComprehensive(actualConfig yip.YipCo
 	}
 
 	// Basic structure validation
-	v.g.Expect(actualConfig.Name).To(Equal("Kubeadm Kairos Cluster Provider"))
-	v.g.Expect(actualConfig.Stages).To(HaveKey("boot.before"))
+	v.g.Expect(actualConfig.Name).To(gomega.Equal("Kubeadm Kairos Cluster Provider"))
+	v.g.Expect(actualConfig.Stages).To(gomega.HaveKey("boot.before"))
 
 	stages := actualConfig.Stages["boot.before"]
 	result.ActualStageCount = len(stages)
@@ -70,17 +98,17 @@ func (v *ComprehensiveYipValidator) ValidateComprehensive(actualConfig yip.YipCo
 func (v *ComprehensiveYipValidator) getExpectedStagesForScenario(scenario TestScenario) []string {
 	expectedStages := []string{
 		"Run Pre Kubeadm Commands",
-		"Run Pre Kubeadm Disable SwapOff", 
+		"Run Pre Kubeadm Disable SwapOff",
 		"Run Load Kube Images",
 	}
 
 	// Add proxy stage if proxy is configured
-	if scenario.proxyConfig {
+	if scenario.proxyConfig != "" {
 		expectedStages = append([]string{"Set proxy env"}, expectedStages...)
 	}
 
 	// Add local images stage if local images are enabled
-	if scenario.localImages {
+	if scenario.localImages != "" {
 		expectedStages = append(expectedStages, "Run Import Local Images")
 	}
 
@@ -173,7 +201,7 @@ func (v *ComprehensiveYipValidator) validateStageContent(stages []yip.Stage, sce
 }
 
 func (v *ComprehensiveYipValidator) validateProxyStage(stage yip.Stage, scenario TestScenario, result *TestValidationResult) {
-	if !scenario.proxyConfig {
+	if scenario.proxyConfig == "" {
 		result.ValidationErrors = append(result.ValidationErrors, "Proxy stage found but proxy not configured")
 		return
 	}
@@ -217,7 +245,7 @@ func (v *ComprehensiveYipValidator) validateProxyStage(stage yip.Stage, scenario
 		if !strings.Contains(containerdFile.Content, "[Service]") {
 			result.ValidationErrors = append(result.ValidationErrors, "Missing [Service] section in containerd proxy file")
 		}
-		
+
 		// Validate service folder name in path
 		expectedServiceFolder := "containerd"
 		if scenario.containerRuntime == "spectro-containerd" {
@@ -239,7 +267,7 @@ func (v *ComprehensiveYipValidator) validatePreKubeadmCommandsStage(stage yip.St
 
 	expectedRootPath := getRootPath(scenario.environmentMode)
 	expectedCommand := fmt.Sprintf("/bin/bash %s/opt/kubeadm/scripts/kube-pre-init.sh %s", expectedRootPath, expectedRootPath)
-	
+
 	if stage.Commands[0] != expectedCommand {
 		result.ValidationErrors = append(result.ValidationErrors,
 			fmt.Sprintf("Pre-kubeadm command mismatch: expected %s, got %s", expectedCommand, stage.Commands[0]))
@@ -296,7 +324,7 @@ func (v *ComprehensiveYipValidator) validateKubeadmExecutionStage(stage yip.Stag
 	}
 
 	// Validate proxy parameters if proxy is configured
-	if scenario.proxyConfig {
+	if scenario.proxyConfig != "" {
 		if !strings.Contains(command, "true") || !strings.Contains(command, "proxy.example.com") {
 			result.ValidationErrors = append(result.ValidationErrors, "Missing proxy parameters in kubeadm command")
 		}
@@ -352,7 +380,7 @@ func (v *ComprehensiveYipValidator) validateKubeadmReconfigureStage(stage yip.St
 	// Validate parameters count
 	paramCount := len(strings.Fields(command))
 	expectedParamCount := 6 // Base parameters
-	if scenario.proxyConfig {
+	if scenario.proxyConfig != "" {
 		expectedParamCount = 9 // Additional proxy parameters
 	}
 
@@ -363,7 +391,7 @@ func (v *ComprehensiveYipValidator) validateKubeadmReconfigureStage(stage yip.St
 }
 
 func (v *ComprehensiveYipValidator) validateLocalImagesStage(stage yip.Stage, scenario TestScenario, result *TestValidationResult) {
-	if !scenario.localImages {
+	if scenario.localImages == "" {
 		result.ValidationErrors = append(result.ValidationErrors, "Local images stage found but local images not configured")
 		return
 	}
@@ -394,10 +422,10 @@ func (v *ComprehensiveYipValidator) validateLocalImagesStage(stage yip.Stage, sc
 // PrintValidationSummary prints a comprehensive validation summary
 func (v *ComprehensiveYipValidator) PrintValidationSummary(results []*TestValidationResult) {
 	fmt.Printf("\n=== Provider-Kubeadm Integration Test Validation Summary ===\n\n")
-	
+
 	passedTests := 0
 	failedTests := 0
-	
+
 	for _, result := range results {
 		if len(result.ValidationErrors) == 0 && len(result.MissingStages) == 0 && len(result.UnexpectedStages) == 0 {
 			passedTests++
@@ -405,19 +433,19 @@ func (v *ComprehensiveYipValidator) PrintValidationSummary(results []*TestValida
 		} else {
 			failedTests++
 			fmt.Printf("❌ %s - FAILED\n", result.Scenario.name)
-			
+
 			if result.ActualStageCount != result.ExpectedStageCount {
 				fmt.Printf("   Stage Count: Expected %d, Got %d\n", result.ExpectedStageCount, result.ActualStageCount)
 			}
-			
+
 			if len(result.MissingStages) > 0 {
 				fmt.Printf("   Missing Stages: %s\n", strings.Join(result.MissingStages, ", "))
 			}
-			
+
 			if len(result.UnexpectedStages) > 0 {
 				fmt.Printf("   Unexpected Stages: %s\n", strings.Join(result.UnexpectedStages, ", "))
 			}
-			
+
 			if len(result.ValidationErrors) > 0 {
 				fmt.Printf("   Validation Errors:\n")
 				for _, err := range result.ValidationErrors {
@@ -426,13 +454,13 @@ func (v *ComprehensiveYipValidator) PrintValidationSummary(results []*TestValida
 			}
 		}
 	}
-	
+
 	fmt.Printf("\n=== Summary ===\n")
 	fmt.Printf("Total Tests: %d\n", len(results))
 	fmt.Printf("Passed: %d\n", passedTests)
 	fmt.Printf("Failed: %d\n", failedTests)
 	fmt.Printf("Coverage: %.1f%%\n", float64(passedTests)/float64(len(results))*100)
-	
+
 	if failedTests == 0 {
 		fmt.Printf("🎉 All tests passed! Provider-kubeadm has 100%% YIP stage generation coverage.\n")
 	}

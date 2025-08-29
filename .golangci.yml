@@ -1,0 +1,37 @@
+version: 2
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/kairos-io/kairos/provider-kubeadm
+  misspell:
+    locale: US
+  unused:
+    check-exported: false
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - ineffassign
+    - misspell
+    - unused
+    - errcheck
+
+run:
+  timeout: 5m
+
+issues:
+  exclude-dirs:
+    - tests
+  exclude-rules:
+    # Exclude test files from certain checks
+    - path: "_test\\.go"
+      linters:
+        - errcheck
+        - unused
+        - staticcheck
+    # Allow dot imports in test files for Gomega
+    - path: "_test\\.go"
+      text: "dot imports"

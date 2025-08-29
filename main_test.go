@@ -243,21 +243,3 @@ joinConfiguration:
 		})
 	}
 }
-
-// Helper functions for unit tests
-func getStageNames(stages []yip.Stage) []string {
-	names := make([]string, len(stages))
-	for i, stage := range stages {
-		names[i] = stage.Name
-	}
-	return names
-}
-
-func findStageByName(stages []yip.Stage, name string) *yip.Stage {
-	for i := range stages {
-		if stages[i].Name == name {
-			return &stages[i]
-		}
-	}
-	return nil
-}

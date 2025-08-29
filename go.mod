@@ -10,8 +10,7 @@ require (
 	github.com/mudler/yip v1.16.3
 	github.com/onsi/gomega v1.38.2
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
-	github.com/spf13/afero v1.9.3
-	github.com/twpayne/go-vfs/v4 v4.3.0
+	github.com/twpayne/go-vfs/v5 v5.0.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.31.2
@@ -64,6 +63,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect

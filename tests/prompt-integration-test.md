@@ -196,7 +196,7 @@ g := NewWithT(t)
 2. Virtual Filesystem Setup Pattern:
 
 // Setup virtual filesystem for each test scenario
-func setupTestFileSystem(kubeadmVersion, environmentMode string) (afero.Fs, func(), error) {
+func setupTestFileSystem(kubeadmVersion, environmentMode string) (vfs.FS, func(), error) {
 var rootPath string
 if environmentMode == "agent" {
 rootPath = "/persistent/spectro"
@@ -388,13 +388,13 @@ g := NewWithT(t)
 
       errorTests := []struct {
           name            string
-          mockSetup       func() afero.Fs
+          mockSetup       func() vfs.FS
           clusterInput    clusterplugin.Cluster
           expectedError   string
       }{
           {
               name: "kubeadm_binary_missing",
-              mockSetup: func() afero.Fs {
+              mockSetup: func() vfs.FS {
                   // Setup filesystem without kubeadm binary
                   fileSystem := map[string]interface{}{
                       "/usr/bin/": nil, // Empty directory
