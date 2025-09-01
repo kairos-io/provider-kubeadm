@@ -1,0 +1,23 @@
+#cloud-config
+# Minimal Kairos configuration for worker node
+install:
+  device: "auto"
+  auto: true
+  reboot: true
+
+cluster:
+  cluster_token: "your-cluster-token-here"  # Get from: kubeadm token create
+  control_plane_host: 10.10.131.183  # VIP IP for the cluster
+  role: worker
+  # config: |  # Let kubeadm auto-detect runtime socket
+  #   joinConfiguration:
+  #     nodeRegistration:
+  #       criSocket: unix:///run/containerd/containerd.sock
+
+stages:
+  initramfs:
+  - users:
+      kairos:
+        groups:
+          - sudo
+        passwd: kairos

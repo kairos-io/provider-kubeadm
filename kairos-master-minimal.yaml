@@ -1,0 +1,35 @@
+#cloud-config
+# Minimal Kairos configuration for master/init node
+# After deployment, get the worker join token with:
+#   kubeadm token create --print-join-command
+install:
+  device: "auto"
+  auto: true
+  reboot: true
+
+cluster:
+  cluster_token: "your-cluster-token-here"
+  control_plane_host: 10.10.131.183  # VIP IP for the cluster
+  role: init
+  config: |
+    clusterConfiguration:
+      kubernetesVersion: v1.32.4
+      networking:
+        podSubnet: 192.168.0.0/16
+        serviceSubnet: 192.169.0.0/16
+    # initConfiguration:
+    #   nodeRegistration:
+    #     criSocket: unix:///run/containerd/containerd.sock
+    # joinConfiguration:
+    #   nodeRegistration:
+    #     criSocket: unix:///run/containerd/containerd.sock
+
+stages:
+  initramfs:
+  - users:
+      kairos:
+        groups:
+          - sudo
+        passwd: kairos
+  - commands:
+    - ln -s /etc/kubernetes/admin.conf /run/kubeconfig
