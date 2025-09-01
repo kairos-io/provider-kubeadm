@@ -177,14 +177,11 @@ RUN BASE_IMAGE_NAME=$(echo ${BASE_IMAGE} | grep -o '[^/]*:' | rev | cut -c2- | r
 
 
 
-# Install iSCSI packages to satisfy dracut iSCSI module requirements
+# Configure dracut to omit iSCSI modules that cause boot failures
 # This prevents the "iscsiroot requested but kernel/initrd does not support iscsi" error
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        open-iscsi \
-        iscsiuio && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Following the pattern from official Kairos examples for Ubuntu builds
+RUN mkdir -p /etc/dracut.conf.d && \
+    echo 'omit_dracutmodules+=" iscsi iscsiroot "' > /etc/dracut.conf.d/no-iscsi.conf
 
 # Now run kairos-init at the very end after all setup is complete
 # This ensures all binaries and configurations are available for initramfs creation

@@ -297,7 +297,6 @@ export IMAGE_NAME=mykairos-kubeadm
 # Build the image
 docker build \
   --build-arg KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-  --build-arg PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4 \
   --build-arg TARGETARCH=amd64 \
   -t ${IMAGE_NAME}:latest \
   .
