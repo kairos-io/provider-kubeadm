@@ -177,6 +177,15 @@ RUN BASE_IMAGE_NAME=$(echo ${BASE_IMAGE} | grep -o '[^/]*:' | rev | cut -c2- | r
 
 
 
+# Install iSCSI packages to satisfy dracut iSCSI module requirements
+# This prevents the "iscsiroot requested but kernel/initrd does not support iscsi" error
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        open-iscsi \
+        iscsiuio && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Now run kairos-init at the very end after all setup is complete
 # This ensures all binaries and configurations are available for initramfs creation
 # Use the resolved K8s version or generate a proper semver if VERSION is "latest"
