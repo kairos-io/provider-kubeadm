@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile to build Kairos image with kubeadm provider using kairos-init
 
 # Build arguments
-ARG BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-v3.2.4
+ARG BASE_IMAGE=quay.io/kairos/fedora:40-core-amd64-generic-v3.5.1
 ARG KUBEADM_VERSION=latest
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
