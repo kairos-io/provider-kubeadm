@@ -3,6 +3,8 @@
 # IMPORTANT: Update control_plane_host to your actual node IP address
 # After deployment, get the worker join token with:
 #   kubeadm token create --print-join-command
+hostname: master-{{ trunc 4 .MachineID }}
+
 install:
   device: "auto"
   auto: true

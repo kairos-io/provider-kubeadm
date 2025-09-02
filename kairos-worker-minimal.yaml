@@ -1,10 +1,19 @@
 #cloud-config
 # Minimal Kairos configuration for worker node
 # IMPORTANT: Use the same control_plane_host as your master node
+hostname: worker-{{ trunc 4 .MachineID }}
+
 install:
   device: "auto"
   auto: true
   reboot: true
+
+users:
+  - name: kairos
+    passwd: kairos
+    groups:
+      - admin
+
 
 cluster:
   cluster_token: "your-cluster-token-here"  # Get from: kubeadm token create
