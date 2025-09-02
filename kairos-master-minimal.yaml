@@ -27,12 +27,6 @@ cluster:
       networking:
         podSubnet: 10.244.0.0/16      # Flannel default
         serviceSubnet: 10.96.0.0/12   # Kubernetes default
-    # initConfiguration:
-    #   nodeRegistration:
-    #     criSocket: unix:///run/containerd/containerd.sock
-    # joinConfiguration:
-    #   nodeRegistration:
-    #     criSocket: unix:///run/containerd/containerd.sock
 
 stages:
   initramfs:

@@ -19,10 +19,6 @@ cluster:
   cluster_token: "your-cluster-token-here"  # Use the same string as your master node
   control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
   role: worker
-  # config: |  # Let kubeadm auto-detect runtime socket
-  #   joinConfiguration:
-  #     nodeRegistration:
-  #       criSocket: unix:///run/containerd/containerd.sock
 
 stages:
   initramfs:
