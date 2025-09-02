@@ -22,7 +22,9 @@ cluster:
     clusterConfiguration:
       kubernetesVersion: v1.34.0
       controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
-      # networking: # Uses kubeadm defaults: podSubnet=10.244.0.0/16, serviceSubnet=10.96.0.0/12
+      networking:
+        podSubnet: 10.244.0.0/16      # Flannel default
+        serviceSubnet: 10.96.0.0/12   # Kubernetes default
     # initConfiguration:
     #   nodeRegistration:
     #     criSocket: unix:///run/containerd/containerd.sock
@@ -39,3 +41,5 @@ stages:
         passwd: kairos
   - commands:
     - ln -s /etc/kubernetes/admin.conf /run/kubeconfig
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld

@@ -22,3 +22,6 @@ stages:
         groups:
           - sudo
         passwd: kairos
+  - commands:
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld

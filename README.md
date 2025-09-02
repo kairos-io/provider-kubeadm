@@ -39,7 +39,9 @@ cluster:
     clusterConfiguration:
       kubernetesVersion: v1.34.0
       controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
-      # networking: # Uses kubeadm defaults: podSubnet=10.244.0.0/16, serviceSubnet=10.96.0.0/12
+      networking:
+        podSubnet: 10.244.0.0/16      # Flannel default
+        serviceSubnet: 10.96.0.0/12   # Kubernetes default
 
 stages:
   initramfs:
@@ -50,6 +52,8 @@ stages:
         passwd: kairos
   - commands:
     - ln -s /etc/kubernetes/admin.conf /run/kubeconfig
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld
 ```
 
 ### Worker Nodes
@@ -77,6 +81,9 @@ stages:
         groups:
           - sudo
         passwd: kairos
+  - commands:
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld
 ```
 
 ## Deployment Steps
@@ -222,27 +229,28 @@ cluster:
 
 #### Subnet Configuration
 
-**Recommended: Use kubeadm defaults** (simplest approach):
-- **No configuration needed** - just omit the `networking` section entirely
-- **kubeadm defaults**: `podSubnet=10.244.0.0/16`, `serviceSubnet=10.96.0.0/12`
-- **Works perfectly with Flannel** - no CNI configuration required
+**Recommended: Use standard defaults**:
+- **podSubnet**: `10.244.0.0/16` (Flannel default)
+- **serviceSubnet**: `10.96.0.0/12` (Kubernetes default)
 
-**Why use defaults?**
-- ✅ **Simplest configuration** - no subnet definitions needed
+**Why these settings work well**:
+- ✅ **Perfect Flannel compatibility** - matches Flannel's default configuration
 - ✅ **No CNI configuration required** - Flannel works out of the box  
 - ✅ **Standard Kubernetes setup** - matches most documentation
 - ✅ **Unlikely to conflict** with host networks
 
-**Only specify custom subnets if defaults conflict with your network**:
+**Important**: The `podSubnet` **must be specified** for CNI plugins to work properly. You cannot omit the networking section entirely.
+
+**For custom networks** (only if defaults conflict):
 ```yaml
 networking:
   podSubnet: 192.168.0.0/16      # Custom pod subnet
   serviceSubnet: 192.169.0.0/16  # Custom service subnet
 ```
 
-**Subnet compatibility**:
+**Subnet compatibility check**:
 - Host network: `192.168.122.0/24` (example)
-- kubeadm defaults: `10.244.0.0/16` (pods), `10.96.0.0/12` (services) ✅ (no overlap)
+- Recommended: `10.244.0.0/16` (pods), `10.96.0.0/12` (services) ✅ (no overlap)
 
 ### Auto-Detection
 
@@ -366,15 +374,36 @@ cat /var/log/kube-post-init.log
 kubectl logs -n kube-system <pod-name>
 ```
 
-### Required Ports
+### Firewall Configuration
 
-Ensure these ports are open between nodes:
+**Automatic firewall disabling**: The provided configurations automatically disable `firewalld` on both master and worker nodes to prevent Kubernetes networking issues.
+
+**Why disable firewalld?**
+- ✅ **Prevents CNI conflicts** - Avoids interference with pod networking
+- ✅ **Simplifies setup** - No need to configure complex firewall rules
+- ✅ **Reduces troubleshooting** - Eliminates firewall-related networking issues
+
+**Alternative approach** (if you need firewall enabled):
+```bash
+# Instead of disabling, configure firewalld for Kubernetes
+firewall-cmd --permanent --add-port=6443/tcp     # API server
+firewall-cmd --permanent --add-port=2379-2380/tcp # etcd
+firewall-cmd --permanent --add-port=10250/tcp    # kubelet
+firewall-cmd --permanent --add-port=10251/tcp    # kube-scheduler  
+firewall-cmd --permanent --add-port=10252/tcp    # kube-controller-manager
+firewall-cmd --permanent --add-port=8472/udp     # Flannel VXLAN
+firewall-cmd --reload
+```
+
+### Required Ports (Reference)
+
+If you choose to configure firewall instead of disabling it:
 - 6443: Kubernetes API server
 - 2379-2380: etcd server client API  
 - 10250: Kubelet API
 - 10251: kube-scheduler
 - 10252: kube-controller-manager
-- CNI specific ports (varies by plugin)
+- 8472/udp: Flannel VXLAN (CNI specific)
 
 ## Building Custom Image
 
