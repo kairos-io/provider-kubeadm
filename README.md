@@ -481,12 +481,14 @@ For ARM64 builds:
 ```bash
 docker build \
   --build-arg KUBEADM_VERSION=v1.32.0 \
-  --build-arg PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4 \
+  --build-arg VERSION=v4.7.0-rc.4 \
   --build-arg TARGETARCH=arm64 \
   --platform linux/arm64 \
   -t ${IMAGE_NAME}-arm64:latest \
   .
 ```
+
+> **Note:** The `VERSION` build argument sets the version string that gets embedded into the provider binary for reporting purposes. It does not affect which version of the provider code is built - that is determined by the Git commit/tag you're building from.
 
 #### Different Kubernetes Versions
 
@@ -494,7 +496,7 @@ docker build \
 # For Kubernetes v1.31.x
 docker build \
   --build-arg KUBEADM_VERSION=v1.31.3 \
-  --build-arg PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4 \
+  --build-arg VERSION=v4.7.0-rc.4 \
   -t mykairos-kubeadm-v1.31:latest \
   .
 ```
