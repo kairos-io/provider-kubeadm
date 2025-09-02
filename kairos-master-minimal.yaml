@@ -21,6 +21,7 @@ cluster:
   role: init
   config: |
     clusterConfiguration:
+      # IMPORTANT: This version must match KUBEADM_VERSION in the Dockerfile used to build your Kairos image
       kubernetesVersion: v1.34.0
       controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
       networking:

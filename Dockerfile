@@ -2,6 +2,8 @@
 
 # Build arguments
 ARG BASE_IMAGE=quay.io/kairos/fedora:40-core-amd64-generic-v3.5.1
+# IMPORTANT: This version must match the kubernetesVersion in your configuration files
+# (e.g., kairos-master-minimal.yaml, kairos-worker-minimal.yaml)
 ARG KUBEADM_VERSION=latest
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0

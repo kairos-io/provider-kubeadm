@@ -37,6 +37,7 @@ cluster:
   role: init
   config: |
     clusterConfiguration:
+      # IMPORTANT: This version must match KUBEADM_VERSION in the Dockerfile used to build your Kairos image
       kubernetesVersion: v1.34.0
       controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
       networking:
@@ -199,7 +200,16 @@ kube-scheduler-fedora            1/1     Running   0          10m
 - **`cluster_token`**: Bootstrap token for node authentication (expires after 24 hours)
 - **`control_plane_host`**: IP address where the Kubernetes API server will be accessible
 - **`role`**: Either `init` (first master), `controlplane` (additional masters), or `worker`
-- **`kubernetesVersion`**: Must match the kubeadm/kubelet binaries in your Kairos image
+- **`kubernetesVersion`**: Must match the `KUBEADM_VERSION` build argument in your Dockerfile
+
+#### ⚠️ Critical: Version Consistency Requirement
+
+The `kubernetesVersion` specified in your configuration files **must exactly match** the `KUBEADM_VERSION` build argument used when building your Kairos image. Mismatched versions will cause cluster initialization to fail.
+
+**Example consistency check**:
+- Dockerfile: `ARG KUBEADM_VERSION=v1.34.0`
+- Config file: `kubernetesVersion: v1.34.0` ✅
+- Config file: `kubernetesVersion: v1.33.0` ❌ (mismatch!)
 
 ### Network Configuration
 
@@ -407,7 +417,7 @@ The default Kairos images come with provider-kairos (k3s/k0s). To use provider-k
 - kubeadm, kubelet, and kubectl binaries (specific version)
 - provider-kubeadm plugin
 
-**Important**: The `kubernetesVersion` in your configuration must match the kubeadm/kubelet version in your image.
+**Important**: The `kubernetesVersion` in your configuration must match the `KUBEADM_VERSION` build argument used when building your Kairos image with the Dockerfile.
 
 ### Prerequisites
 
@@ -423,9 +433,10 @@ Use the `Dockerfile` at the root of this repository to build an image:
 export KUBERNETES_VERSION=v1.32.0
 export IMAGE_NAME=mykairos-kubeadm
 
+# IMPORTANT: Remember to update kubernetesVersion in your config files to match!
 # Build the image
 docker build \
-  --build-arg KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+  --build-arg KUBEADM_VERSION=${KUBERNETES_VERSION} \
   --build-arg TARGETARCH=amd64 \
   -t ${IMAGE_NAME}:latest \
   .
@@ -469,7 +480,7 @@ For ARM64 builds:
 
 ```bash
 docker build \
-  --build-arg KUBERNETES_VERSION=v1.32.0 \
+  --build-arg KUBEADM_VERSION=v1.32.0 \
   --build-arg PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4 \
   --build-arg TARGETARCH=arm64 \
   --platform linux/arm64 \
@@ -482,7 +493,7 @@ docker build \
 ```bash
 # For Kubernetes v1.31.x
 docker build \
-  --build-arg KUBERNETES_VERSION=v1.31.3 \
+  --build-arg KUBEADM_VERSION=v1.31.3 \
   --build-arg PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4 \
   -t mykairos-kubeadm-v1.31:latest \
   .
@@ -506,7 +517,7 @@ FROM quay.io/kairos/fedora:39-core-amd64-generic-v3.1.1 AS base-kairos
 #### Runtime Issues
 
 1. **Provider not found**: Verify the binary is in `/system/providers/provider-kubeadm`
-2. **Version mismatch**: Ensure `KUBERNETES_VERSION` matches your configuration
+2. **Version mismatch**: Ensure `KUBEADM_VERSION` in Dockerfile matches `kubernetesVersion` in your config files
 3. **Permission issues**: Binary should be executable (`chmod +x`)
 
 ### Advanced Configuration
