@@ -100,35 +100,30 @@ stages:
 
 3. Wait for the node to boot and initialize the cluster
 
-### 2. Get Join Token
+### 2. Deploy Worker Nodes
 
-Once the master node is running, SSH to it and get the join token:
+1. Update the worker configuration:
+   - Set the same `cluster_token` string as used in your master configuration
+   - Set the same `control_plane_host` as the master
+   - Deploy as many worker nodes as needed
+
+> **Note**: The `cluster_token` can be any string of your choice. The provider automatically converts it to a valid kubeadm token format. You just need to use the same string on both master and worker nodes.
+
+2. Deploy worker nodes using your preferred method
+
+3. Workers will automatically join the cluster
+
+### 3. Verify Cluster
+
+Once all nodes are deployed, you can verify the cluster by SSH'ing to the master node:
 
 ```bash
 # SSH to master node
 ssh kairos@<master-ip>
 
-# Generate join token and command
-sudo kubeadm token create --print-join-command
+# Check cluster status
+kubectl get nodes
 ```
-
-This will output something like:
-```bash
-kubeadm join 10.10.131.183:6443 --token abc123.defghijk456789 --discovery-token-ca-cert-hash sha256:1234567890abcdef...
-```
-
-Extract the token part (e.g., `abc123.defghijk456789`) for your worker configuration.
-
-### 3. Deploy Worker Nodes
-
-1. Update the worker configuration:
-   - Set the `cluster_token` from step 2
-   - Set the same `control_plane_host` as the master
-   - Deploy as many worker nodes as needed
-
-2. Deploy worker nodes using your preferred method
-
-3. Workers will automatically join the cluster
 
 ### 4. Install CNI Network Plugin
 
