@@ -1,5 +1,6 @@
 #cloud-config
 # Minimal Kairos configuration for worker node
+# IMPORTANT: Use the same control_plane_host as your master node
 install:
   device: "auto"
   auto: true
@@ -7,7 +8,7 @@ install:
 
 cluster:
   cluster_token: "your-cluster-token-here"  # Get from: kubeadm token create
-  control_plane_host: 10.10.131.183  # VIP IP for the cluster
+  control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
   role: worker
   # config: |  # Let kubeadm auto-detect runtime socket
   #   joinConfiguration:

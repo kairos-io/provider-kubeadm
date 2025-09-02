@@ -23,6 +23,7 @@ Use [`kairos-master-minimal.yaml`](./kairos-master-minimal.yaml) for the first n
 ```yaml
 #cloud-config
 # Minimal Kairos configuration for master/init node
+# IMPORTANT: Update control_plane_host to your actual node IP address
 # After deployment, get the worker join token with:
 #   kubeadm token create --print-join-command
 install:
@@ -32,14 +33,13 @@ install:
 
 cluster:
   cluster_token: "your-cluster-token-here"
-  control_plane_host: 10.10.131.183  # VIP IP for the cluster
+  control_plane_host: 192.168.122.71  # ← CHANGE TO YOUR ACTUAL NODE IP
   role: init
   config: |
     clusterConfiguration:
-      kubernetesVersion: v1.32.4
-      networking:
-        podSubnet: 192.168.0.0/16
-        serviceSubnet: 192.169.0.0/16
+      kubernetesVersion: v1.34.0
+      controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
+      # networking: # Uses kubeadm defaults: podSubnet=10.244.0.0/16, serviceSubnet=10.96.0.0/12
 
 stages:
   initramfs:
@@ -59,6 +59,7 @@ Use [`kairos-worker-minimal.yaml`](./kairos-worker-minimal.yaml) for worker node
 ```yaml
 #cloud-config
 # Minimal Kairos configuration for worker node
+# IMPORTANT: Use the same control_plane_host as your master node
 install:
   device: "auto"
   auto: true
@@ -66,7 +67,7 @@ install:
 
 cluster:
   cluster_token: "your-cluster-token-here"  # Get from: kubeadm token create
-  control_plane_host: 10.10.131.183  # VIP IP for the cluster
+  control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
   role: worker
 
 stages:
@@ -122,19 +123,71 @@ Extract the token part (e.g., `abc123.defghijk456789`) for your worker configura
 
 3. Workers will automatically join the cluster
 
-### 4. Verify Cluster
+### 4. Install CNI Network Plugin
+
+**⚠️ CRITICAL**: After the cluster initializes, you **must** install a CNI (Container Network Interface) plugin for pod networking to work.
+
+#### Install Flannel (Recommended)
+
+SSH to the master node and install Flannel:
+
+```bash
+# Simple one-command installation - works perfectly with kubeadm defaults!
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+```
+
+**Why Flannel?**
+- ✅ **Zero configuration needed** with kubeadm defaults
+- ✅ **Simple and reliable** for most use cases
+- ✅ **Well-documented** and widely used
+
+#### Alternative CNI Plugins
+
+If you need different features, consider these alternatives:
+- **Calico**: Advanced network policies, BGP routing (requires configuration)
+- **Weave Net**: Automatic encryption, service mesh features
+- **Cilium**: eBPF-based networking, advanced observability
+
+**Important Notes**:
+- Wait 2-3 minutes for the CNI pods to start
+- The cluster won't be functional until CNI is installed
+- Flannel works perfectly with kubeadm's default pod subnet (`10.244.0.0/16`)
+
+### 5. Verify Cluster
 
 SSH to the master node and check cluster status:
 
 ```bash
-# Check nodes
+# Check nodes (should show Ready status after CNI installation)
 kubectl get nodes
 
-# Check system pods
+# Check system pods (should include CNI pods)
 kubectl get pods -n kube-system
+
+# Verify CNI is working
+kubectl get pods -n kube-flannel  # For Flannel
+kubectl get pods -n calico-system # For Calico
 
 # Get cluster info
 kubectl cluster-info
+```
+
+Example of healthy cluster output:
+```bash
+$ kubectl get nodes
+NAME     STATUS   ROLES           AGE   VERSION
+fedora   Ready    control-plane   10m   v1.34.0
+
+$ kubectl get pods -n kube-system
+NAME                             READY   STATUS    RESTARTS   AGE
+coredns-6f6b679f8f-abc12         1/1     Running   0          10m
+coredns-6f6b679f8f-def34         1/1     Running   0          10m
+etcd-fedora                      1/1     Running   0          10m
+kube-apiserver-fedora            1/1     Running   0          10m
+kube-controller-manager-fedora   1/1     Running   0          10m
+kube-flannel-ds-xyz89            1/1     Running   0          5m
+kube-proxy-gh567                 1/1     Running   0          10m
+kube-scheduler-fedora            1/1     Running   0          10m
 ```
 
 ## Configuration Details
@@ -148,10 +201,48 @@ kubectl cluster-info
 
 ### Network Configuration
 
-- **`podSubnet`**: IP range for pod networking (default: 192.168.0.0/16)
-- **`serviceSubnet`**: IP range for services (default: 192.169.0.0/16)
+#### Critical IP Address Setup
 
-Adjust these subnets if they conflict with your existing network infrastructure.
+**⚠️ IMPORTANT**: The `control_plane_host` must match the **actual IP address** of your master node, not a VIP or placeholder IP.
+
+To find your node's IP address:
+```bash
+# Check the node's actual IP address
+ip addr show | grep "inet.*scope global"
+```
+
+Then update your configuration:
+```yaml
+cluster:
+  control_plane_host: 192.168.122.71  # ← Use your ACTUAL node IP here
+  config: |
+    clusterConfiguration:
+      controlPlaneEndpoint: "192.168.122.71:6443"  # ← Same IP here
+```
+
+#### Subnet Configuration
+
+**Recommended: Use kubeadm defaults** (simplest approach):
+- **No configuration needed** - just omit the `networking` section entirely
+- **kubeadm defaults**: `podSubnet=10.244.0.0/16`, `serviceSubnet=10.96.0.0/12`
+- **Works perfectly with Flannel** - no CNI configuration required
+
+**Why use defaults?**
+- ✅ **Simplest configuration** - no subnet definitions needed
+- ✅ **No CNI configuration required** - Flannel works out of the box  
+- ✅ **Standard Kubernetes setup** - matches most documentation
+- ✅ **Unlikely to conflict** with host networks
+
+**Only specify custom subnets if defaults conflict with your network**:
+```yaml
+networking:
+  podSubnet: 192.168.0.0/16      # Custom pod subnet
+  serviceSubnet: 192.169.0.0/16  # Custom service subnet
+```
+
+**Subnet compatibility**:
+- Host network: `192.168.122.0/24` (example)
+- kubeadm defaults: `10.244.0.0/16` (pods), `10.96.0.0/12` (services) ✅ (no overlap)
 
 ### Auto-Detection
 
@@ -190,19 +281,100 @@ kubeadm token create --print-join-command
 
 ### Common Issues
 
+#### 1. Kubelet Won't Start - "NetworkPluginNotReady"
+
+**Symptoms**: 
+```
+"Container runtime network not ready" networkReady="NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized"
+```
+
+**Cause**: No CNI plugin installed after cluster initialization.
+
+**Solution**: Install a CNI plugin (see [CNI Installation](#4-install-cni-network-plugin) section above).
+
+#### 2. Control Plane Connection Refused
+
+**Symptoms**:
+```
+kubectl: The connection to the server localhost:8080 was refused
+# OR
+dial tcp 192.168.122.41:6443: connect: connection refused
+```
+
+**Causes & Solutions**:
+
+**A. Wrong IP in configuration**:
+- Check actual node IP: `ip addr show`
+- Update `control_plane_host` to match the actual IP
+- Add `controlPlaneEndpoint` with same IP
+
+**B. Missing kubeconfig**:
+```bash
+export KUBECONFIG=/etc/kubernetes/admin.conf
+# OR copy to default location
+mkdir -p ~/.kube
+sudo cp /etc/kubernetes/admin.conf ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+```
+
+#### 3. CNI Subnet Mismatch (Flannel)
+
+**Symptoms**:
+```
+failed to acquire lease: subnet "10.244.0.0/16" specified in the flannel net config doesn't contain "192.168.0.0/24" PodCIDR
+```
+
+**Solution**: Edit Flannel configuration to match your `podSubnet`:
+```bash
+# Download and modify Flannel manifest
+curl -s https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml -o kube-flannel.yml
+sed -i 's|10.244.0.0/16|192.168.0.0/16|g' kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+```
+
+#### 4. Node IP Detection Issues
+
+**Symptoms**: Wrong IP detected by kubeadm during init.
+
+**Solutions**:
+- Use `--apiserver-advertise-address` flag
+- Set explicit `controlPlaneEndpoint` in configuration
+- Check routing table: `ip route show default`
+
+#### 5. General Debugging
+
 1. **Node not joining**: Check network connectivity and firewall rules
-2. **Token expired**: Generate a new token on the master node
+2. **Token expired**: Generate a new token on the master node  
 3. **IP conflicts**: Adjust podSubnet/serviceSubnet in master config
-4. **Auto-detection fails**: Uncomment and set explicit paths in config
+4. **Auto-detection fails**: Use explicit configuration values
+
+### Log Files
+
+Check these logs for detailed error information:
+```bash
+# Kubelet logs
+journalctl -u kubelet -f
+
+# Container runtime logs  
+journalctl -u containerd -f
+
+# Kairos initialization logs
+cat /var/log/kube-init.log
+cat /var/log/kube-post-init.log
+
+# Pod logs
+kubectl logs -n kube-system <pod-name>
+```
 
 ### Required Ports
 
 Ensure these ports are open between nodes:
 - 6443: Kubernetes API server
-- 2379-2380: etcd server client API
+- 2379-2380: etcd server client API  
 - 10250: Kubelet API
 - 10251: kube-scheduler
 - 10252: kube-controller-manager
+- CNI specific ports (varies by plugin)
 
 ## Building Custom Image
 
@@ -218,76 +390,9 @@ The default Kairos images come with provider-kairos (k3s/k0s). To use provider-k
 - Docker
 - Internet connection for downloading binaries
 
-### Step 1: Create Dockerfile
+### Step 1: Build a container image
 
-Create a `Dockerfile` that extends the base Kairos image with provider-kubeadm:
-
-```dockerfile
-# Build stage for downloading provider-kubeadm
-FROM alpine:latest AS provider-kubeadm-downloader
-
-ARG PROVIDER_KUBEADM_VERSION=v4.7.0-rc.4
-ARG TARGETARCH=amd64
-
-# Install curl and checksum tools
-RUN apk add --no-cache curl sha256sum
-
-# Download provider-kubeadm binary and checksum
-WORKDIR /tmp
-RUN curl -fsSL -L "https://github.com/kairos-io/provider-kubeadm/releases/download/${PROVIDER_KUBEADM_VERSION}/agent-provider-kubeadm-${PROVIDER_KUBEADM_VERSION}-linux-${TARGETARCH}.tar.gz" \
-    -o provider-kubeadm.tar.gz
-RUN curl -fsSL -L "https://github.com/kairos-io/provider-kubeadm/releases/download/${PROVIDER_KUBEADM_VERSION}/agent-provider-kubeadm-${PROVIDER_KUBEADM_VERSION}-checksums.txt" \
-    -o checksums.txt
-
-# Verify checksum - extract expected hash and compare with actual
-RUN EXPECTED_HASH=$(grep "agent-provider-kubeadm-${PROVIDER_KUBEADM_VERSION}-linux-${TARGETARCH}.tar.gz" checksums.txt | cut -d' ' -f1) && \
-    ACTUAL_HASH=$(sha256sum provider-kubeadm.tar.gz | cut -d' ' -f1) && \
-    echo "Expected: $EXPECTED_HASH" && \
-    echo "Actual:   $ACTUAL_HASH" && \
-    [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ] || (echo "Checksum mismatch!" && exit 1)
-
-# Extract binary
-RUN tar -xzf provider-kubeadm.tar.gz
-RUN chmod +x agent-provider-kubeadm
-
-# Declare global ARGs
-ARG KUBERNETES_VERSION=v1.32.0
-ARG KUBERNETES_DISTRO=kubeadm
-ARG MODEL=generic
-ARG TRUSTED_BOOT=false
-ARG VERSION=v3.1.1
-ARG KAIROS_INIT=v0.5.18
-
-# Get kairos-init stage
-FROM quay.io/kairos/kairos-init:${KAIROS_INIT} AS kairos-init
-
-# Main build stage
-FROM quay.io/kairos/ubuntu:24.04-core-amd64-generic-v3.1.1
-
-# Re-declare ARGs for this stage
-ARG KUBERNETES_VERSION=v1.32.0
-ARG KUBERNETES_DISTRO=kubeadm
-ARG MODEL=generic
-ARG TRUSTED_BOOT=false
-ARG VERSION=v3.1.1
-
-# Copy provider-kubeadm binary to the right location
-COPY --from=provider-kubeadm-downloader /tmp/agent-provider-kubeadm /system/providers/provider-kubeadm
-
-# Initialize Kairos with kubeadm (with retry for repository issues)
-RUN --mount=type=bind,from=kairos-init,src=/kairos-init,dst=/kairos-init \
-    for i in 1 2 3; do \
-        echo "Attempt $i: Running kairos-init..."; \
-        /kairos-init -l debug -m "${MODEL}" -t "${TRUSTED_BOOT}" -k "${KUBERNETES_DISTRO}" --k8sversion "${KUBERNETES_VERSION}" --version "${VERSION}" && \
-        /kairos-init validate -t "${TRUSTED_BOOT}" && break; \
-        echo "Attempt $i failed, retrying..."; \
-        sleep 5; \
-    done
-```
-
-### Step 2: Build the Docker Image
-
-Build your custom Kairos image:
+Use the `Dockerfile` at the root of this repository to build an image:
 
 ```bash
 # Set your desired Kubernetes version
@@ -302,7 +407,7 @@ docker build \
   .
 ```
 
-### Step 3: Create Bootable ISO
+### Step 2: Create Bootable ISO
 
 Use Auroraboot to convert your Docker image into a bootable ISO:
 
@@ -320,7 +425,7 @@ docker run --rm -it \
     docker://${IMAGE_NAME}:latest
 ```
 
-### Step 4: Verify the Build
+### Step 3: Verify the Build
 
 Check that your ISO contains the provider-kubeadm:
 
