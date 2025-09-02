@@ -1,8 +1,7 @@
 #cloud-config
 # Minimal Kairos configuration for master/init node
 # IMPORTANT: Update control_plane_host to your actual node IP address
-# After deployment, get the worker join token with:
-#   kubeadm token create --print-join-command
+# After deployment, workers should use the same cluster_token string
 hostname: master-{{ trunc 4 .MachineID }}
 
 install:
@@ -17,7 +16,7 @@ users:
       - admin
 
 cluster:
-  cluster_token: "your-cluster-token-here"
+  cluster_token: "your-cluster-token-here"  # Any string - workers must use the same string
   control_plane_host: 192.168.122.71  # ← CHANGE TO YOUR ACTUAL NODE IP
   role: init
   config: |
