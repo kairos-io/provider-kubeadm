@@ -24,15 +24,14 @@ Use [`kairos-master-minimal.yaml`](./kairos-master-minimal.yaml) for the first n
 #cloud-config
 # Minimal Kairos configuration for master/init node
 # IMPORTANT: Update control_plane_host to your actual node IP address
-# After deployment, get the worker join token with:
-#   kubeadm token create --print-join-command
+# After deployment, workers should use the same cluster_token string
 install:
   device: "auto"
   auto: true
   reboot: true
 
 cluster:
-  cluster_token: "your-cluster-token-here"
+  cluster_token: "your-cluster-token-here"  # Any string - workers must use the same string
   control_plane_host: 192.168.122.71  # ← CHANGE TO YOUR ACTUAL NODE IP
   role: init
   config: |
@@ -71,7 +70,7 @@ install:
   reboot: true
 
 cluster:
-  cluster_token: "your-cluster-token-here"  # Get from: kubeadm token create
+  cluster_token: "your-cluster-token-here"  # Use the same string as your master node
   control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
   role: worker
 
