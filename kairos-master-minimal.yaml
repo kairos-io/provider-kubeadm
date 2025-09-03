@@ -1,0 +1,41 @@
+#cloud-config
+# Minimal Kairos configuration for master/init node
+# IMPORTANT: Update control_plane_host to your actual node IP address
+# After deployment, workers should use the same cluster_token string
+hostname: master-{{ trunc 4 .MachineID }}
+
+install:
+  device: "auto"
+  auto: true
+  reboot: true
+
+users:
+  - name: kairos
+    passwd: kairos
+    groups:
+      - admin
+
+cluster:
+  cluster_token: "your-cluster-token-here"  # Any string - workers must use the same string
+  control_plane_host: 192.168.122.71  # ← CHANGE TO YOUR ACTUAL NODE IP
+  role: init
+  config: |
+    clusterConfiguration:
+      # IMPORTANT: This version must match KUBEADM_VERSION in the Dockerfile used to build your Kairos image
+      kubernetesVersion: v1.34.0
+      controlPlaneEndpoint: "192.168.122.71:6443"  # ← SAME IP AS ABOVE
+      networking:
+        podSubnet: 10.244.0.0/16      # Flannel default
+        serviceSubnet: 10.96.0.0/12   # Kubernetes default
+
+stages:
+  initramfs:
+  - users:
+      kairos:
+        groups:
+          - sudo
+        passwd: kairos
+  - commands:
+    - ln -s /etc/kubernetes/admin.conf /run/kubeconfig
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld

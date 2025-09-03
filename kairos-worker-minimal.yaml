@@ -1,0 +1,32 @@
+#cloud-config
+# Minimal Kairos configuration for worker node
+# IMPORTANT: Use the same control_plane_host as your master node
+hostname: worker-{{ trunc 4 .MachineID }}
+
+install:
+  device: "auto"
+  auto: true
+  reboot: true
+
+users:
+  - name: kairos
+    passwd: kairos
+    groups:
+      - admin
+
+
+cluster:
+  cluster_token: "your-cluster-token-here"  # Use the same string as your master node
+  control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
+  role: worker
+
+stages:
+  initramfs:
+  - users:
+      kairos:
+        groups:
+          - sudo
+        passwd: kairos
+  - commands:
+    # Disable firewalld to prevent Kubernetes networking issues
+    - systemctl disable --now firewalld
