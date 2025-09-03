@@ -6,7 +6,7 @@ ARG BASE_IMAGE=quay.io/kairos/fedora:40-core-amd64-generic-v3.5.1
 # (e.g., kairos-master-minimal.yaml, kairos-worker-minimal.yaml)
 ARG KUBEADM_VERSION=latest
 ARG CRICTL_VERSION=1.25.0
-ARG RELEASE_VERSION=0.4.0 # Update to 0.18.0?  https://github.com/kubernetes/release/releases/tag/v0.18.0
+ARG RELEASE_VERSION=0.4.0 # Update newer? e.g. https://github.com/kubernetes/release/releases/tag/v0.18.0
 ARG FIPS_ENABLED=false
 ARG KAIROS_INIT_VERSION=v0.6.0
 ARG VERSION=latest

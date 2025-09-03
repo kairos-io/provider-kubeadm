@@ -28,6 +28,8 @@ cluster:
         podSubnet: 10.244.0.0/16      # Flannel default
         serviceSubnet: 10.96.0.0/12   # Kubernetes default
 
+# There are settings needed to get spegel to work (https://spegel.dev/docs/getting-started/)
+# Feel free to remove these if you don't need them.
 write_files:
 - path: /etc/containerd/config.toml
   permissions: "0644"

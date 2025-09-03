@@ -20,6 +20,8 @@ cluster:
   control_plane_host: 192.168.122.71  # ← SAME IP AS YOUR MASTER NODE
   role: worker
 
+# There are settings needed to get spegel to work (https://spegel.dev/docs/getting-started/)
+# Feel free to remove these if you don't need them.
 write_files:
 - path: /etc/containerd/config.toml
   permissions: "0644"
