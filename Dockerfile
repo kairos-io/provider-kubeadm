@@ -6,7 +6,7 @@ ARG BASE_IMAGE=quay.io/kairos/fedora:40-core-amd64-generic-v3.5.1
 # (e.g., kairos-master-minimal.yaml, kairos-worker-minimal.yaml)
 ARG KUBEADM_VERSION=latest
 ARG CRICTL_VERSION=1.25.0
-ARG RELEASE_VERSION=0.4.0
+ARG RELEASE_VERSION=0.4.0 # Update newer? e.g. https://github.com/kubernetes/release/releases/tag/v0.18.0
 ARG FIPS_ENABLED=false
 ARG KAIROS_INIT_VERSION=v0.6.0
 ARG VERSION=latest
@@ -85,14 +85,14 @@ WORKDIR /containerd
 RUN if [ "$FIPS_ENABLED" = "true" ]; then \
         curl -sSL "https://storage.googleapis.com/spectro-fips/containerd/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz" | tar -xz; \
     else \
-        curl -sSL "https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz" | tar -xz; \
+        curl -sSL "https://github.com/containerd/containerd/releases/download/v2.1.4/containerd-2.1.4-linux-amd64.tar.gz" | tar -xz; \
     fi
 
 # Download runc
 RUN if [ "$FIPS_ENABLED" = "true" ]; then \
         curl -SL -o runc "https://storage.googleapis.com/spectro-fips/runc-1.1.4/runc"; \
     else \
-        curl -SL -o runc "https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"; \
+        curl -SL -o runc "https://github.com/opencontainers/runc/releases/download/v1.3.0/runc.amd64"; \
     fi
 
 RUN chmod +x runc
@@ -102,7 +102,7 @@ RUN mkdir -p cni-plugins && \
     if [ "$FIPS_ENABLED" = "true" ]; then \
         curl -sSL "https://storage.googleapis.com/spectro-fips/cni-plugins/v1.1.1/cni-plugins-1.1.1-linux-amd64.tar.gz" | tar -C cni-plugins -xz; \
     else \
-        curl -sSL "https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz" | tar -C cni-plugins -xz; \
+        curl -sSL "https://github.com/containernetworking/plugins/releases/download/v1.8.0/cni-plugins-linux-amd64-v1.8.0.tgz" | tar -C cni-plugins -xz; \
     fi
 
 # Stage 5: Main image

@@ -28,6 +28,29 @@ cluster:
         podSubnet: 10.244.0.0/16      # Flannel default
         serviceSubnet: 10.96.0.0/12   # Kubernetes default
 
+# There are settings needed to get spegel to work (https://spegel.dev/docs/getting-started/)
+# Feel free to remove these if you don't need them.
+write_files:
+- path: /etc/containerd/config.toml
+  permissions: "0644"
+  content: |
+    version = 2
+    root="/opt/containerd"
+    imports = ["/etc/containerd/conf.d/*.toml"]
+
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        sandbox_image = "k8s.gcr.io/pause:3.6"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            BinaryName = "/opt/bin/runc"
+            SystemdCgroup = true
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          config_path = "/etc/containerd/certs.d"
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          discard_unpacked_layers = false
+
 stages:
   initramfs:
   - users:
@@ -39,3 +62,9 @@ stages:
     - ln -s /etc/kubernetes/admin.conf /run/kubeconfig
     # Disable firewalld to prevent Kubernetes networking issues
     - systemctl disable --now firewalld
+    # Create containerd registry config directory
+    - mkdir -p /etc/containerd/certs.d
+  boot:
+  - commands:
+    # Restart containerd to pick up new registry configuration
+    - systemctl restart containerd
