@@ -26,22 +26,37 @@ MAX_RETRIES=3
 ETCD_HEALTH_TIMEOUT=60
 RETRY_DELAY=30
 
-restart_containerd() {
-  if systemctl cat spectro-containerd >/dev/null 2<&1; then
-    systemctl restart spectro-containerd
-  fi
+# Function to detect containerd socket path
+detect_containerd_socket() {
+  # Common containerd socket paths across different distributions
+  local possible_paths=(
+    "/var/run/containerd/containerd.sock"
+    "/run/containerd/containerd.sock"
+    "/var/run/dockershim.sock"
+    "/run/dockershim.sock"
+  )
 
-  if systemctl cat containerd >/dev/null 2<&1; then
-    systemctl restart containerd
-  fi
+  # Check common socket paths
+  for path in "${possible_paths[@]}"; do
+    if [ -S "$path" ]; then
+      echo "unix://$path"
+      return 0
+    fi
+  done
+
+  # If nothing found, return default
+  echo "unix:///var/run/containerd/containerd.sock"
 }
+
 
 # Function to wait for static pods to be created and running
 wait_for_static_pods() {
   local timeout=$1
   local start_time=$(date +%s)
+  local containerd_socket=$(detect_containerd_socket)
 
   echo "Waiting for static pods to be created and running..."
+  echo "Using containerd socket: $containerd_socket"
 
   # Check if crictl is available
   if ! command -v crictl >/dev/null 2>&1; then
@@ -63,8 +78,8 @@ wait_for_static_pods() {
     # Check if all required static pod manifests exist
     if [ -f /etc/kubernetes/manifests/etcd.yaml ] && [ -f /etc/kubernetes/manifests/kube-apiserver.yaml ] && [ -f /etc/kubernetes/manifests/kube-controller-manager.yaml ] && [ -f /etc/kubernetes/manifests/kube-scheduler.yaml ]; then
       # Check if etcd container is running
-      local etcd_container_id=$(crictl ps --name etcd --quiet 2>/dev/null)
-      if [ -n "$etcd_container_id" ] && crictl ps --id "$etcd_container_id" --format table | grep -q "Running"; then
+      local etcd_container_id=$(crictl --runtime-endpoint="$containerd_socket" ps --name etcd --quiet 2>/dev/null)
+      if [ -n "$etcd_container_id" ] && crictl --runtime-endpoint="$containerd_socket" ps --id "$etcd_container_id" | grep -q "Running"; then
         echo "Static pods are running, waiting additional time for etcd to stabilize..."
         sleep 10
         return 0
@@ -81,6 +96,7 @@ wait_for_static_pods() {
 check_etcd_health_if_available() {
   local timeout=$1
   local start_time=$(date +%s)
+  local containerd_socket=$(detect_containerd_socket)
 
   # Check if etcdctl is available
   if ! command -v etcdctl >/dev/null 2>&1; then
@@ -95,11 +111,12 @@ check_etcd_health_if_available() {
   fi
 
   echo "Checking etcd health with etcdctl..."
+  echo "Using containerd socket: $containerd_socket"
 
   while [ $(($(date +%s) - start_time)) -lt $timeout ]; do
     # Check if etcd container is running
-    local etcd_container_id=$(crictl ps --name etcd --quiet 2>/dev/null)
-    if [ -n "$etcd_container_id" ] && crictl ps --id "$etcd_container_id" --format table | grep -q "Running"; then
+    local etcd_container_id=$(crictl --runtime-endpoint="$containerd_socket" ps --name etcd --quiet 2>/dev/null)
+    if [ -n "$etcd_container_id" ] && crictl --runtime-endpoint="$containerd_socket" ps --id "$etcd_container_id" | grep -q "Running"; then
       # Try to connect to local etcd directly
       if timeout 10s etcdctl endpoint health --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key >/dev/null 2>&1; then
         echo "etcd is healthy"
@@ -130,9 +147,19 @@ cleanup_cluster_state() {
   fi
 }
 
+restart_containerd() {
+  if systemctl cat containerd >/dev/null 2<&1; then
+    systemctl restart containerd
+  fi
+}
+
 do_kubeadm_reset() {
-  if [ -S /run/spectro/containerd/containerd.sock ]; then
-    kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+  local containerd_socket=$(detect_containerd_socket)
+
+  # Check if the detected socket exists
+  local socket_path="${containerd_socket#unix://}"
+  if [ -S "$socket_path" ]; then
+    kubeadm reset -f --cri-socket "$containerd_socket" --cleanup-tmp-dir
   else
     kubeadm reset -f --cleanup-tmp-dir
   fi
