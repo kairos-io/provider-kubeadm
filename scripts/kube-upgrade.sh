@@ -1,10 +1,11 @@
 #!/bin/bash
-
-exec   > >(tee -ia /var/log/kube-upgrade.log)
-exec  2> >(tee -ia /var/log/kube-upgrade.log >& 2)
-exec 19>> /var/log/kube-upgrade.log
+logfile="/var/log/kube-upgrade-$(date +%Y-%m-%d_%H-%M-%S).log"
+exec   > >(tee -ia $logfile)
+exec  2> >(tee -ia $logfile >& 2)
+exec 19>> $logfile
 
 set -x
+
 
 NODE_ROLE=$1
 
@@ -147,10 +148,7 @@ run_upgrade() {
 
         if sudo -E bash -c "$upgrade_command"
         then
-            # Update current client version in the version file
-            echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
             old_version=$current_version
-
             delete_lock_config_map
             echo "upgrade success"
         else
@@ -164,6 +162,9 @@ run_upgrade() {
         fi
     done
     upgrade_kubelet
+    # Update current client version in the version file
+    echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
+    echo "upgrade completed"
 }
 
 run_upgrade
