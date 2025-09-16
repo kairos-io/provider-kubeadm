@@ -42,6 +42,7 @@ do_kubeadm_reset() {
   fi
   systemctl daemon-reload
   restart_containerd
+  "$root_path"/opt/kubeadm/scripts/import.sh "$root_path"/opt/kube-images
 }
 
 backup_kube_vip_manifest_if_present() {
