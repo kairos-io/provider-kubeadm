@@ -3,11 +3,9 @@
 CONTENT_PATH=$1
 LOG_FILE=$2
 
-exec   > >(tee -ia $LOG_FILE)
-exec  2> >(tee -ia $LOG_FILE >& 2)
-exec 19>> $LOG_FILE
-
-
+exec > >(tee -ia "$LOG_FILE")
+exec 2> >(tee -ia "$LOG_FILE" >&2)
+exec 19>>$LOG_FILE
 
 if [ -S /run/spectro/containerd/containerd.sock ]; then
   CTR_SOCKET=/run/spectro/containerd/containerd.sock
@@ -32,7 +30,8 @@ import_image() {
       break
     else
       if [ $i -eq 10 ]; then
-        echo "Import failed: $tarfile (attempt $i)"
+        echo "Import failed: $tarfile exit code: $exit_code (attempt $i)"
+        echo "Output: $output"
       fi
     fi
     sleep 1
@@ -40,4 +39,6 @@ import_image() {
 }
 
 # find all tar files recursively
-find -L "$CONTENT_PATH" -name "*.tar" -type f -exec import_image {} \;
+find -L "$CONTENT_PATH" -name "*.tar" -type f | while read -r tarfile; do
+  import_image "$tarfile"
+done
