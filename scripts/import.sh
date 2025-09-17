@@ -1,6 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 CONTENT_PATH=$1
+LOG_FILE=$2
+
+exec > >(tee -ia "$LOG_FILE")
+exec 2> >(tee -ia "$LOG_FILE" >&2)
+exec 19>>$LOG_FILE
+
+echo "--------------------------------"
+echo "Importing images from $CONTENT_PATH at $(date)"
 
 if [ -S /run/spectro/containerd/containerd.sock ]; then
   CTR_SOCKET=/run/spectro/containerd/containerd.sock
@@ -9,9 +17,11 @@ else
 fi
 
 import_image() {
-  tarfile=$1
-  i=1
-  while [ $i -le 10 ]; do
+  local tarfile=$1
+  local i=1
+
+  echo "Importing: $tarfile"
+  for i in {1..10}; do
     output=$(/opt/bin/ctr -n k8s.io --address $CTR_SOCKET image import "$tarfile" --all-platforms 2>&1)
     exit_code=$?
 
@@ -22,16 +32,14 @@ import_image() {
       echo "Import skipped (filtered out): $tarfile (attempt $i)"
       break
     else
-      if [ $i -eq 10 ]; then
-        echo "Import failed: $tarfile (attempt $i)"
-      fi
+      echo "Import failed: $tarfile exit code: $exit_code (attempt $i)"
+      echo "Output: $output"
     fi
-    i=$((i + 1))
+    sleep 1
   done
 }
 
 # find all tar files recursively
 find -L "$CONTENT_PATH" -name "*.tar" -type f | while read -r tarfile; do
-  echo "Importing: $tarfile"
   import_image "$tarfile"
 done

@@ -40,7 +40,7 @@ func GetPreKubeadmImportLocalImageStage(clusterCtx *domain.ClusterContext) yip.S
 		Name: "Run Import Local Images",
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(clusterRootPath, helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s > /var/log/import.log", filepath.Join(clusterRootPath, helperScriptPath, "import.sh"), localImagesPath),
+			fmt.Sprintf("/bin/bash %s %s /var/log/import.log", filepath.Join(clusterRootPath, helperScriptPath, "import.sh"), localImagesPath),
 		},
 		If: fmt.Sprintf("[ -d %s ]", localImagesPath),
 	}
@@ -51,7 +51,7 @@ func GetPreKubeadmImportCoreK8sImageStage(rootPath string) yip.Stage {
 		Name: "Run Load Kube Images",
 		Commands: []string{
 			fmt.Sprintf("chmod +x %s", filepath.Join(rootPath, helperScriptPath, "import.sh")),
-			fmt.Sprintf("/bin/sh %s %s > /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images")),
+			fmt.Sprintf("/bin/bash %s %s /var/log/import-kube-images.log", filepath.Join(rootPath, helperScriptPath, "import.sh"), filepath.Join(rootPath, "opt/kube-images")),
 		},
 	}
 }
