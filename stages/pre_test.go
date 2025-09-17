@@ -86,7 +86,7 @@ func TestGetPreKubeadmImportLocalImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /opt/kubeadm/scripts/import.sh /opt/content/images > /var/log/import.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /opt/kubeadm/scripts/import.sh /opt/content/images /var/log/import.log"))
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestGetPreKubeadmImportLocalImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /persistent/spectro/opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /persistent/spectro/opt/kubeadm/scripts/import.sh /persistent/spectro/opt/content/images > /var/log/import.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /persistent/spectro/opt/kubeadm/scripts/import.sh /persistent/spectro/opt/content/images /var/log/import.log"))
 			},
 		},
 		{
@@ -116,7 +116,7 @@ func TestGetPreKubeadmImportLocalImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /mnt/custom/opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /mnt/custom/opt/kubeadm/scripts/import.sh /custom/images/path > /var/log/import.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /mnt/custom/opt/kubeadm/scripts/import.sh /custom/images/path /var/log/import.log"))
 			},
 		},
 	}
@@ -153,7 +153,7 @@ func TestGetPreKubeadmImportCoreK8sImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /opt/kubeadm/scripts/import.sh /opt/kube-images > /var/log/import-kube-images.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /opt/kubeadm/scripts/import.sh /opt/kube-images /var/log/import-kube-images.log"))
 			},
 		},
 		{
@@ -164,7 +164,7 @@ func TestGetPreKubeadmImportCoreK8sImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /persistent/spectro/opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /persistent/spectro/opt/kubeadm/scripts/import.sh /persistent/spectro/opt/kube-images > /var/log/import-kube-images.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /persistent/spectro/opt/kubeadm/scripts/import.sh /persistent/spectro/opt/kube-images /var/log/import-kube-images.log"))
 			},
 		},
 		{
@@ -175,7 +175,7 @@ func TestGetPreKubeadmImportCoreK8sImageStage(t *testing.T) {
 			validateCommands: func(t *testing.T, commands []string) {
 				g := NewWithT(t)
 				g.Expect(commands[0]).To(Equal("chmod +x /mnt/custom/opt/kubeadm/scripts/import.sh"))
-				g.Expect(commands[1]).To(Equal("/bin/sh /mnt/custom/opt/kubeadm/scripts/import.sh /mnt/custom/opt/kube-images > /var/log/import-kube-images.log"))
+				g.Expect(commands[1]).To(Equal("/bin/bash /mnt/custom/opt/kubeadm/scripts/import.sh /mnt/custom/opt/kube-images /var/log/import-kube-images.log"))
 			},
 		},
 	}
