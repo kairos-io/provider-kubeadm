@@ -7,6 +7,9 @@ exec > >(tee -ia "$LOG_FILE")
 exec 2> >(tee -ia "$LOG_FILE" >&2)
 exec 19>>$LOG_FILE
 
+echo "--------------------------------"
+echo "Importing images from $CONTENT_PATH at $(date)"
+
 if [ -S /run/spectro/containerd/containerd.sock ]; then
   CTR_SOCKET=/run/spectro/containerd/containerd.sock
 else
@@ -29,10 +32,8 @@ import_image() {
       echo "Import skipped (filtered out): $tarfile (attempt $i)"
       break
     else
-      if [ $i -eq 10 ]; then
-        echo "Import failed: $tarfile exit code: $exit_code (attempt $i)"
-        echo "Output: $output"
-      fi
+      echo "Import failed: $tarfile exit code: $exit_code (attempt $i)"
+      echo "Output: $output"
     fi
     sleep 1
   done
