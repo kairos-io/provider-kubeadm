@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/version"
@@ -19,8 +20,8 @@ func GetClusterRootPath(cluster clusterplugin.Cluster) string {
 	return rootpath
 }
 
-func IsKubeadmVersionGreaterThan131() (int, error) {
-	currentVersion, err := getCurrentKubeadmVersion()
+func IsKubeadmVersionGreaterThan131(rootPath string) (int, error) {
+	currentVersion, err := getCurrentKubeadmVersion(rootPath)
 	if err != nil {
 		return 0, err
 	}
@@ -33,8 +34,19 @@ func IsKubeadmVersionGreaterThan131() (int, error) {
 	return v1.Compare("v1.31.0")
 }
 
-func getCurrentKubeadmVersion() (string, error) {
-	cmd := exec.Command("kubeadm", "version", "-o", "short")
+func getCurrentKubeadmVersion(rootPath string) (string, error) {
+	// Try to find kubeadm binary in custom path first (agent mode), then fall back to system PATH
+	kubeadmPath := "kubeadm"
+	
+	// Check for kubeadm in custom root path (agent mode)
+	if rootPath != "/" {
+		customKubeadmPath := filepath.Join(rootPath, "usr/bin", "kubeadm")
+		if _, err := exec.LookPath(customKubeadmPath); err == nil {
+			kubeadmPath = customKubeadmPath
+		}
+	}
+	
+	cmd := exec.Command(kubeadmPath, "version", "-o", "short")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("error getting current kubeadm version: %v", err)
