@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -47,7 +47,7 @@ jobs:
             image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -71,7 +71,7 @@ jobs:
             image_repository: us-docker.pkg.dev/palette-images-fips/edge/kairos-io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -87,7 +87,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: |
           git fetch --prune --unshallow
       - name: Set up Go
