@@ -80,7 +80,7 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 
 	clusterCtx := CreateClusterContext(cluster)
 
-	cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterCtx.RootPath)
+	cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterCtx.KubernetesVersion)
 	if err != nil {
 		logrus.Fatalf("failed to check if kubeadm version is greater than 131: %v", err)
 	} else if cmpResult < 0 {
@@ -110,6 +110,7 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		ClusterToken:                utils.TransformToken(cluster.ClusterToken),
 		UserOptions:                 cluster.Options,
 		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
+		KubernetesVersion:           getKubernetesVersion(cluster.Options),
 	}
 
 	if cluster.LocalImagesPath == "" {
@@ -189,4 +190,13 @@ func getContainerdServiceFolderName(options map[string]string) string {
 func setClusterSubnetCtx(clusterCtx *domain.ClusterContext, serviceSubnet, podSubnet string) {
 	clusterCtx.ServiceCidr = serviceSubnet
 	clusterCtx.ClusterCidr = podSubnet
+}
+
+func getKubernetesVersion(config string) string {
+	var clusterOptions domain.ClusterOptions
+	if err := yaml.Unmarshal([]byte(config), &clusterOptions); err != nil {
+		logrus.Errorf("Failed to unmarshal cluster options: %v", err)
+		return ""
+	}
+	return clusterOptions.ClusterConfig.KubernetesVersion
 }
