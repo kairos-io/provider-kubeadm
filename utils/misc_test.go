@@ -78,23 +78,3 @@ func TestIsKubeadmVersionGreaterThan131(t *testing.T) {
 		}
 	})
 }
-
-// TestGetCurrentKubeadmVersion tests the getCurrentKubeadmVersion function
-func TestGetCurrentKubeadmVersion(t *testing.T) {
-	t.Run("get_current_kubeadm_version", func(t *testing.T) {
-		g := NewWithT(t)
-
-		// This test will be skipped if kubeadm is not available
-		// We're testing the function structure, not the actual version retrieval
-		result, err := getCurrentKubeadmVersion("/")
-
-		// The function should return a string and error
-		// We can't predict the exact result without kubeadm binary
-		g.Expect(result).To(BeAssignableToTypeOf(""))
-		// Error might be nil or not depending on kubeadm availability
-		// We just validate that err is an error type when it's not nil
-		if err != nil {
-			g.Expect(err.Error()).To(BeAssignableToTypeOf(""))
-		}
-	})
-}

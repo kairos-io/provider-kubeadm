@@ -243,3 +243,15 @@ joinConfiguration:
 		})
 	}
 }
+
+func TestGetKubernetesVersion(t *testing.T) {
+	g := NewWithT(t)
+
+	cluster := clusterplugin.Cluster{
+		Options: `clusterConfiguration:
+  kubernetesVersion: v1.30.11`,
+	}
+
+	result := getKubernetesVersion(cluster.Options)
+	g.Expect(result).To(Equal("v1.30.11"))
+}
