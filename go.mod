@@ -2,7 +2,7 @@ module github.com/kairos-io/kairos/provider-kubeadm
 
 go 1.24.0
 
-toolchain go1.24.3
+toolchain go1.25.2
 
 require (
 	github.com/kairos-io/kairos-sdk v0.5.0
