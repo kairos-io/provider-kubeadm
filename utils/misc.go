@@ -34,10 +34,11 @@ func IsKubeadmVersionGreaterThan131() (int, error) {
 }
 
 func getCurrentKubeadmVersion() (string, error) {
-	cmd := exec.Command("kubeadm", "version", "-o", "short")
+	kubeadmPath := GetKubeadmBinaryPath()
+	cmd := exec.Command(kubeadmPath, "version", "-o", "short")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("error getting current kubeadm version: %v", err)
+		return "", fmt.Errorf("error getting current kubeadm version using %s: %v", kubeadmPath, err)
 	}
 	return strings.TrimSpace(string(output)), nil
 }

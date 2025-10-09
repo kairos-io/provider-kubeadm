@@ -1,0 +1,403 @@
+topic,file,line_start,line_end,code_context_excerpt
+COMMAND_INJECTION_EXEC,main.go,68,69,"cmd := exec.Command(""/bin/sh"", ""-c"", filepath.Join(clusterRootPath, ""/opt/kubeadm/scripts"", ""kube-reset.sh""))"
+COMMAND_INJECTION_EXEC,utils/misc.go,43,44,"cmd := exec.Command(kubeadmPath, ""version"", ""-o"", ""short"")"
+SHELL_INJECTION_BASH,stages/init.go,93,94,"fmt.Sprintf(""bash %s %s %t %s %s %s"", filepath.Join(clusterRootPath, helperScriptPath, ""kube-init.sh""), clusterRootPath, true, proxy[""HTTP_PROXY""], proxy[""HTTPS_PROXY""], utils.GetNoProxyConfig(clusterCtx))"
+SHELL_INJECTION_BASH,stages/init.go,124,125,"fmt.Sprintf(""bash %s %s %s %t %s %s %s"", filepath.Join(clusterRootPath, helperScriptPath, ""kube-upgrade.sh""), clusterCtx.NodeRole, clusterRootPath, true, clusterCtx.EnvConfig[""HTTP_PROXY""], clusterCtx.EnvConfig[""HTTPS_PROXY""], utils.GetNoProxyConfig(clusterCtx))"
+SHELL_INJECTION_BASH,stages/pre.go,43,43,"fmt.Sprintf(""/bin/sh %s %s > /var/log/import.log"", filepath.Join(clusterRootPath, helperScriptPath, ""import.sh""), localImagesPath)"
+SHELL_INJECTION_BASH,stages/pre.go,54,54,"fmt.Sprintf(""/bin/sh %s %s > /var/log/import-kube-images.log"", filepath.Join(rootPath, helperScriptPath, ""import.sh""), filepath.Join(rootPath, ""opt/kube-images""))"
+SHELL_INJECTION_SUDO,scripts/kube-upgrade.sh,148,148,"if sudo -E bash -c ""$upgrade_command"""
+SHELL_INJECTION_SUDO,scripts/kube-reconfigure.sh,45,47,"sudo -E bash -c ""kubeadm init phase control-plane apiserver --config $root_path/opt/kubeadm/cluster-config.yaml""
+sudo -E bash -c ""kubeadm init phase control-plane controller-manager --config $root_path/opt/kubeadm/cluster-config.yaml""
+sudo -E bash -c ""kubeadm init phase control-plane scheduler --config $root_path/opt/kubeadm/cluster-config.yaml"""
+FILE_PERMISSIONS_CHMOD,stages/pre.go,42,42,"fmt.Sprintf(""chmod +x %s"", filepath.Join(clusterRootPath, helperScriptPath, ""import.sh""))"
+FILE_PERMISSIONS_CHMOD,stages/pre.go,53,53,"fmt.Sprintf(""chmod +x %s"", filepath.Join(rootPath, helperScriptPath, ""import.sh""))"
+FILE_PERMISSIONS_CHMOD,scripts/kube-reconfigure.sh,127,128,"chmod 600 /var/lib/kubelet/config.yaml
+chmod 600 /etc/systemd/system/kubelet.service"
+FILE_PERMISSIONS_CHOWN,scripts/kube-reconfigure.sh,135,136,"chown root:root /etc/kubernetes/proxy.conf
+chmod 600 /etc/kubernetes/proxy.conf"
+DESTRUCTIVE_FILE_OPS,scripts/kube-reset.sh,20,23,"rm -rf /etc/kubernetes/etcd
+rm -rf /etc/kubernetes/manifests
+rm -rf /etc/kubernetes/pki
+rm -rf /etc/containerd/config.toml"
+DESTRUCTIVE_FILE_OPS,scripts/kube-reset.sh,34,56,"rm -rf /var/lib/kubelet && rm -rf ${STYLUS_ROOT}/var/lib/kubelet
+rm -f $STYLUS_ROOT/usr/local/bin/kubelet
+umount -l /var/lib/spectro/containerd
+rm -rf /var/lib/spectro/containerd && rm -rf ${STYLUS_ROOT}/var/lib/spectro/containerd
+umount -l /opt/bin
+rm -rf /opt/bin && rm -rf ${STYLUS_ROOT}/opt/bin
+umount -l /opt/cni/bin
+rm -rf /opt/cni && rm -rf ${STYLUS_ROOT}/opt/cni
+umount -l /etc/kubernetes
+rm -rf /etc/kubernetes && rm -rf ${STYLUS_ROOT}/etc/kubernetes
+rm -rf ${STYLUS_ROOT}/opt/kubeadm
+rm -rf ${STYLUS_ROOT}/opt/containerd
+rm -rf ${STYLUS_ROOT}/opt/*init
+rm -rf ${STYLUS_ROOT}/opt/*join
+rm -rf ${STYLUS_ROOT}/opt/kube-images
+rm -rf ${STYLUS_ROOT}/opt/sentinel_kubeadmversion
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-kubelet.slice
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-containerd.slice
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/kubelet.service
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/containerd.service 2> /dev/null
+rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-containerd.service 2> /dev/null"
+DESTRUCTIVE_FILE_OPS,scripts/kube-join.sh,39,40,"iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
+rm -rf ""$root_path""/etc/cni/net.d"
+DESTRUCTIVE_FILE_OPS,scripts/kube-init.sh,37,38,"iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki
+rm -rf ""$root_path""/etc/cni/net.d"
+PANIC_ON_ERROR,log/log.go,14,14,"panic(err)"
+FATAL_ON_ERROR,main.go,37,37,"logrus.Fatal(err)"
+FATAL_ON_ERROR,main.go,85,85,"logrus.Fatalf(""failed to check if kubeadm version is greater than 131: %v"", err)"
+ERROR_HANDLING_MAIN,main.go,50,53,"if err := json.Unmarshal([]byte(event.Data), &payload); err != nil {
+logrus.Error(fmt.Sprintf(""failed to parse boot event: %s"", err.Error()))
+response.Error = fmt.Sprintf(""failed to parse boot event: %s"", err.Error())
+return response"
+ERROR_HANDLING_MAIN,main.go,57,60,"if err := yaml.Unmarshal([]byte(payload.Config), &config); err != nil {
+logrus.Error(fmt.Sprintf(""failed to parse config from boot event: %s"", err.Error()))
+response.Error = fmt.Sprintf(""failed to parse config from boot event: %s"", err.Error())
+return response"
+ERROR_HANDLING_VERSION,utils/misc.go,22,26,"currentVersion, err := getCurrentKubeadmVersion(rootPath)
+if err != nil {
+return 0, err
+}"
+ERROR_HANDLING_VERSION,utils/misc.go,45,46,"if err != nil {
+return """", fmt.Errorf(""error getting current kubeadm version: %v"", err)"
+JSON_YAML_UNMARSHALING,main.go,50,50,"if err := json.Unmarshal([]byte(event.Data), &payload); err != nil {"
+JSON_YAML_UNMARSHALING,main.go,57,57,"if err := yaml.Unmarshal([]byte(payload.Config), &config); err != nil {"
+JSON_YAML_UNMARSHALING,main.go,129,130,"userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
+_ = json.Unmarshal(userOptions, &kubeadmConfig)"
+JSON_YAML_UNMARSHALING,main.go,153,154,"userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
+_ = json.Unmarshal(userOptions, &kubeadmConfig)"
+JSON_YAML_MARSHALING,utils/certs.go,25,25,"v, _ := json.Marshal(certsan)"
+CRYPTOGRAPHIC_OPERATIONS,utils/certs.go,10,14,"func GetCertificateKey(token string) string {
+hasher := sha256.New()
+hasher.Write([]byte(token))
+return hex.EncodeToString(hasher.Sum(nil))
+}"
+CRYPTOGRAPHIC_OPERATIONS,utils/certs.go,16,21,"func TransformToken(clusterToken string) string {
+hash := sha256.New()
+hash.Write([]byte(clusterToken))
+hashString := hex.EncodeToString(hash.Sum(nil))
+return fmt.Sprintf(""%s.%s"", hashString[len(hashString)-6:], hashString[:16])
+}"
+CRYPTOGRAPHIC_OPERATIONS,utils/certs.go,23,28,"func GetCertSansRevision(certsan []string) string {
+h := sha256.New()
+v, _ := json.Marshal(certsan)
+h.Write(v)
+return fmt.Sprintf(""%x"", h.Sum(nil))
+}"
+HARDCODED_URL,Earthfile,90,90,"RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}"
+HARDCODED_URL,Earthfile,98,106,"RUN curl -L ""https://storage.googleapis.com/spectro-fips/cri-tools/v${CRICTL_VERSION}/cri-tools-${CRICTL_VERSION}-linux-amd64.tar.gz"" | sudo tar -C /usr/bin/ -xz
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubeadm
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubelet
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubectl
+RUN curl -L ""https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz"" | sudo tar -C /usr/bin/ -xz
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl"
+HARDCODED_URL,scripts/kube-images-load.sh,42,42,"curl -L -o ""${ARCHIVE_NAME}"" https://github.com/google/go-containerregistry/releases/download/v0.13.0/""${ARCHIVE_NAME}"""
+HARDCODED_URL,scripts/kube-images-load.sh,45,45,"wget https://github.com/google/go-containerregistry/releases/download/v0.13.0/""${ARCHIVE_NAME}"""
+HARDCODED_IP_PORT,utils/defaults.go,88,88,"kubeletCfg.HealthzBindAddress = ""127.0.0.1"""
+HARDCODED_IP_PORT,utils/defaults.go,24,24,"clusterCfg.ControlPlaneEndpoint = fmt.Sprintf(""%s:6443"", clusterCtx.ControlPlaneHost)"
+HARDCODED_IP_PORT,stages/join.go,73,73,"APIServerEndpoint: fmt.Sprintf(""%s:6443"", clusterCtx.ControlPlaneHost)"
+HARDCODED_IP_PORT,domain/constants.go,4,4,"DefaultAPIAdvertiseAddress = ""0.0.0.0"""
+HARDCODED_PATHS,domain/constants.go,7,7,"DefaultRootPath = ""/"""
+HARDCODED_PATHS,main.go,25,25,"log.InitLogger(""/var/log/provider-kubeadm.log"")"
+HARDCODED_PATHS,main.go,116,116,"clusterContext.LocalImagesPath = filepath.Join(clusterContext.RootPath, ""opt/content/images"")"
+INFINITE_RETRY_LOOP,scripts/kube-upgrade.sh,102,111,"until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock -n kube-system --from-literal=node=""${CURRENT_NODE_NAME}"" > /dev/null
+do
+upgrade_node=$(get_current_upgrading_node_name)
+if [ ""$upgrade_node"" = ""$CURRENT_NODE_NAME"" ]; then
+echo ""resuming upgrade""
+break
+fi
+echo ""failed to create configmap for upgrade lock, upgrading is going on the node ${upgrade_node}, retrying in 60 sec""
+sleep 60
+done"
+INFINITE_RETRY_LOOP,scripts/kube-upgrade.sh,115,165,"until [ ""$current_version"" = ""$old_version"" ]
+do
+# worker node will always run 'upgrade node'
+# control plane will also run `upgrade node' except one node will run 'upgrade apply' based on who acquires lock
+upgrade_command=""kubeadm upgrade node""
+if [ ""$PROXY_CONFIGURED"" = true ]; then
+up=(""kubeadm upgrade node"")
+upgrade_command=""${up[*]}""
+fi"
+INFINITE_RETRY_LOOP,scripts/kube-join.sh,63,79,"until HTTP_PROXY=$proxy_http kubeadm join --config ""$root_path""/opt/kubeadm/kubeadm.yaml --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests -v=5 > /dev/null
+do
+echo ""failed to apply kubeadm join, will retry in 10s"";
+do_kubeadm_reset
+echo ""retrying in 10s""
+sleep 10;
+done"
+INFINITE_RETRY_LOOP,scripts/kube-init.sh,60,77,"until HTTPS_PROXY=$proxy_https HTTP_PROXY=$proxy_http kubeadm init --config ""$root_path""/opt/kubeadm/kubeadm.yaml --ignore-preflight-errors=NumCPU,Mem,SystemVerification -v=5 > /dev/null
+do
+echo ""failed to apply kubeadm init, will retry in 10s"";
+do_kubeadm_reset
+echo ""retrying in 10s""
+sleep 10;
+done"
+RETRY_WITH_SLEEP,scripts/kube-join.sh,66,69,"echo ""failed to apply kubeadm join, will retry in 10s"";
+echo ""retrying in 10s""
+sleep 10;"
+RETRY_WITH_SLEEP,scripts/kube-init.sh,64,67,"echo ""failed to apply kubeadm init, will retry in 10s"";
+echo ""retrying in 10s""
+sleep 10;"
+RETRY_WITH_SLEEP,scripts/import.sh,8,17,"for i in {1..10}; do
+if [ -S /run/spectro/containerd/containerd.sock ]; then
+/opt/bin/ctr -n k8s.io --address /run/spectro/containerd/containerd.sock image import ""$tarfile"" --all-platforms
+else
+/opt/bin/ctr -n k8s.io image import ""$tarfile"" --all-platforms
+fi
+if [ $? -eq 0 ]; then
+echo ""Import successful: $tarfile (attempt $i)""
+break
+fi
+done"
+NETWORK_DOWNLOAD_CURL,scripts/kube-images-load.sh,41,45,"*curl)
+curl -L -o ""${ARCHIVE_NAME}"" https://github.com/google/go-containerregistry/releases/download/v0.13.0/""${ARCHIVE_NAME}""
+;;
+*wget)
+wget https://github.com/google/go-containerregistry/releases/download/v0.13.0/""${ARCHIVE_NAME}"""
+NETWORK_DOWNLOAD_CURL,Earthfile,114,120,"RUN curl -sSL https://storage.googleapis.com/spectro-fips/containerd/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
+RUN curl -SL -o runc https://storage.googleapis.com/spectro-fips/runc-1.1.4/runc
+RUN curl -sSL https://storage.googleapis.com/spectro-fips/cni-plugins/v1.1.1/cni-plugins-1.1.1-linux-amd64.tar.gz | sudo tar -C /opt/cni/bin/ -xz
+RUN curl -sSL https://github.com/containerd/containerd/releases/download/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
+RUN curl -SL -o runc ""https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64""
+RUN curl -sSL https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz | sudo tar -C /opt/cni/bin/ -xz"
+FILE_HANDLE_LEAK,log/log.go,12,13,"f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+if err != nil {"
+SYSTEMCTL_CALLS,scripts/kube-pre-init.sh,22,23,"systemctl daemon-reload
+systemctl enable kubelet && systemctl restart kubelet"
+SYSTEMCTL_CALLS,scripts/kube-upgrade.sh,63,65,"systemctl stop kubelet
+cp /opt/kubeadm/bin/kubelet ""$root_path""/usr/local/bin/kubelet
+systemctl daemon-reload && systemctl restart kubelet"
+SYSTEMCTL_CALLS,scripts/kube-reset.sh,24,31,"systemctl stop kubelet
+if systemctl cat spectro-containerd >/dev/null 2<&1; then
+systemctl stop spectro-containerd
+fi
+if systemctl cat containerd >/dev/null 2<&1; then
+systemctl stop containerd
+fi"
+CONTAINERD_SOCKET_DETECTION,scripts/kube-reset.sh,13,17,"if [ -S /run/spectro/containerd/containerd.sock ]; then
+kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+else
+kubeadm reset -f --cleanup-tmp-dir
+fi"
+CONTAINERD_SOCKET_DETECTION,scripts/kube-init.sh,31,35,"if [ -S /run/spectro/containerd/containerd.sock ]; then
+kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+else
+kubeadm reset -f --cleanup-tmp-dir
+fi"
+CONTAINERD_SOCKET_DETECTION,scripts/kube-join.sh,34,38,"if [ -S /run/spectro/containerd/containerd.sock ]; then
+kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+else
+kubeadm reset -f --cleanup-tmp-dir
+fi"
+CONTAINERD_SOCKET_DETECTION,scripts/import.sh,9,15,"if [ -S /run/spectro/containerd/containerd.sock ]; then
+/opt/bin/ctr -n k8s.io --address /run/spectro/containerd/containerd.sock image import ""$tarfile"" --all-platforms
+else
+/opt/bin/ctr -n k8s.io image import ""$tarfile"" --all-platforms
+fi"
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-reset.sh,10,11,"export PATH=""$PATH:$STYLUS_ROOT/usr/bin""
+export PATH=""$PATH:$STYLUS_ROOT/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-upgrade.sh,17,18,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-pre-init.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-post-init.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-join.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-init.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+STYLUS_ROOT_PATH_EXTENSION,scripts/kube-reconfigure.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+VERSION_COMPARISON_LOGIC,utils/misc.go,22,33,"currentVersion, err := getCurrentKubeadmVersion(rootPath)
+if err != nil {
+return 0, err
+}
+v1, err := version.ParseSemantic(currentVersion)
+if err != nil {
+return 0, err
+}
+return v1.Compare(""v1.31.0"")"
+VERSION_CONDITIONAL_LOGIC,main.go,83,92,"cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterCtx.RootPath)
+if err != nil {
+logrus.Fatalf(""failed to check if kubeadm version is greater than 131: %v"", err)
+} else if cmpResult < 0 {
+logrus.Info(""kubeadm version is less than 1.31"")
+finalStages = append(finalStages, getV1Beta3FinalStage(clusterCtx)...)
+} else {
+logrus.Info(""kubeadm version is greater than or equal to 1.31"")
+finalStages = append(finalStages, getV1Beta4FinalStage(clusterCtx)...)
+}"
+VERSION_FILE_MANAGEMENT,scripts/kube-pre-init.sh,41,42,"if [ ! -f ""$root_path""/opt/sentinel_kubeadmversion ]; then
+kubeadm version -o short > ""$root_path""/opt/sentinel_kubeadmversion"
+VERSION_FILE_MANAGEMENT,scripts/kube-upgrade.sh,151,151,"echo ""$current_version"" > ""$root_path""/opt/sentinel_kubeadmversion"
+PROXY_ENV_HANDLING,stages/proxy.go,47,57,"if httpProxy != """" {
+proxy = append(proxy, fmt.Sprintf(""HTTP_PROXY=%s"", httpProxy))
+}
+if httpsProxy != """" {
+proxy = append(proxy, fmt.Sprintf(""HTTPS_PROXY=%s"", httpsProxy))
+}
+if noProxy != """" {
+proxy = append(proxy, fmt.Sprintf(""NO_PROXY=%s"", noProxy))
+}"
+PROXY_ENV_HANDLING,scripts/kube-upgrade.sh,20,33,"if [ -n ""$proxy_no"" ]; then
+export NO_PROXY=$proxy_no
+export no_proxy=$proxy_no
+fi
+if [ -n ""$proxy_http"" ]; then
+export HTTP_PROXY=$proxy_http
+export http_proxy=$proxy_http
+fi
+if [ -n ""$proxy_https"" ]; then
+export https_proxy=$proxy_https
+export HTTPS_PROXY=$proxy_https
+fi"
+KUBECTL_API_CALLS,scripts/kube-upgrade.sh,40,40,"kubectl get configmap upgrade-lock -n kube-system --kubeconfig /etc/kubernetes/admin.conf -o jsonpath=""{['data']['node']}"""
+KUBECTL_API_CALLS,scripts/kube-upgrade.sh,129,129,"master_api_version=$(kubectl --kubeconfig /etc/kubernetes/admin.conf get cm kubeadm-config -n kube-system -o yaml | grep -m 1 kubernetesVersion | tr -s "" "" | cut -d' ' -f 3)"
+KUBECTL_API_CALLS,scripts/kube-post-init.sh,18,22,"secret=$(kubectl get secrets kubeadm-certs -n kube-system -o jsonpath=""{['metadata']['ownerReferences'][0]['name']}"")
+if [ ""$secret"" != ""null"" ] && [ -n ""$secret"" ]; then
+kubectl get secrets -n kube-system ""${secret}"" -o yaml | kubectl apply set-last-applied --create-annotation=true -f -
+kubectl get secrets -n kube-system ""${secret}"" -o yaml | sed '/^( *)expiration.*/d' | kubectl apply -f -
+fi"
+KUBECTL_API_CALLS,scripts/kube-upgrade.sh,47,47,"kubectl --kubeconfig /etc/kubernetes/admin.conf delete configmap upgrade-lock -n kube-system"
+KUBECTL_API_CALLS,scripts/kube-upgrade.sh,71,71,"kubectl get cm kubeadm-config -n kube-system -o jsonpath=""{['data']['ClusterConfiguration']}"" --kubeconfig /etc/kubernetes/admin.conf > ""$root_path""/opt/kubeadm/existing-cluster-config.yaml"
+IPTABLES_FIREWALL_RULES,scripts/kube-reset.sh,19,19,"iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X"
+IPTABLES_FIREWALL_RULES,scripts/kube-init.sh,37,37,"iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki"
+IPTABLES_FIREWALL_RULES,scripts/kube-join.sh,39,39,"iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X && rm -rf /etc/kubernetes/etcd /etc/kubernetes/manifests /etc/kubernetes/pki"
+UMOUNT_OPERATIONS,scripts/kube-reset.sh,33,42,"umount -l /var/lib/kubelet
+umount -l /var/lib/spectro/containerd
+umount -l /opt/bin
+umount -l /opt/cni/bin
+umount -l /etc/kubernetes"
+SERVICE_RESTART_LOGIC,scripts/kube-upgrade.sh,51,59,"restart_containerd() {
+if systemctl cat spectro-containerd >/dev/null 2<&1; then
+systemctl restart spectro-containerd
+fi
+if systemctl cat containerd >/dev/null 2<&1; then
+systemctl restart containerd
+fi
+}"
+SERVICE_RESTART_LOGIC,scripts/kube-reconfigure.sh,140,140,"restart_kubelet"
+CERTIFICATE_FILE_PATHS,utils/defaults.go,70,70,"kubeletCfg.Authentication.X509.ClientCAFile = filepath.Join(constants.KubernetesDir, constants.DefaultCertificateDir, constants.CACertName)"
+CERTIFICATE_FILE_PATHS,scripts/kube-reconfigure.sh,131,131,"chmod 600 /etc/kubernetes/pki/ca.crt"
+CLUSTER_CONFIG_GENERATION,stages/init.go,135,135,"return utils.GetFileStage(""Generate Cluster Config File"", filepath.Join(rootPath, configurationPath, ""cluster-config.yaml""), getUpdatedInitClusterConfig(clusterCfgObj, initCfgObj))"
+KUBELET_CONFIG_GENERATION,stages/init.go,139,139,"return utils.GetFileStage(""Generate Kubelet Config File"", filepath.Join(rootPath, configurationPath, ""kubelet-config.yaml""), getUpdatedKubeletConfig(clusterCfgObj, initCfg, kubeletCfg))"
+KUBEADM_CONFIG_GENERATION,stages/init.go,79,79,"return utils.GetFileStage(""Generate Kubeadm Init Config File"", filepath.Join(rootPath, configurationPath, ""kubeadm.yaml""), kubeadmCfg)"
+TOKEN_REGEX_PARSING,stages/init.go,167,167,"substrs := bootstraputil.BootstrapTokenRegexp.FindStringSubmatch(clusterCtx.ClusterToken)"
+TOKEN_SECRET_HANDLING,stages/init.go,172,173,"ID: substrs[1],
+Secret: substrs[2],"
+PRIVILEGED_CONTAINER_OPS,scripts/import.sh,10,10,"/opt/bin/ctr -n k8s.io --address /run/spectro/containerd/containerd.sock image import ""$tarfile"" --all-platforms"
+PRIVILEGED_CONTAINER_OPS,scripts/import.sh,12,12,"/opt/bin/ctr -n k8s.io image import ""$tarfile"" --all-platforms"
+LOG_FILE_OPERATIONS,scripts/kube-reset.sh,58,60,"rm -rf /var/log/kube*.log
+rm -rf /var/log/apiserver
+rm -rf /var/log/pods"
+LOG_FILE_REDIRECTION,stages/pre.go,43,43,"fmt.Sprintf(""/bin/sh %s %s > /var/log/import.log"", filepath.Join(clusterRootPath, helperScriptPath, ""import.sh""), localImagesPath)"
+LOG_FILE_REDIRECTION,stages/pre.go,54,54,"fmt.Sprintf(""/bin/sh %s %s > /var/log/import-kube-images.log"", filepath.Join(rootPath, helperScriptPath, ""import.sh""), filepath.Join(rootPath, ""opt/kube-images""))"
+LOG_FILE_REDIRECTION,scripts/kube-init.sh,3,5,"exec   > >(tee -ia /var/log/kube-init.log)
+exec  2> >(tee -ia /var/log/kube-init.log >& 2)
+exec 19>> /var/log/kube-init.log"
+SERVICE_FOLDER_NAME_LOGIC,main.go,182,187,"func getContainerdServiceFolderName(options map[string]string) string {
+if _, ok := options[""spectro-containerd-service-name""]; ok {
+return ""spectro-containerd""
+}
+return ""containerd""
+}"
+CLUSTER_CONTEXT_CREATION,main.go,104,122,"func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext {
+clusterContext := &domain.ClusterContext{
+RootPath: utils.GetClusterRootPath(cluster),
+NodeRole: string(cluster.Role),
+EnvConfig: cluster.Env,
+ControlPlaneHost: cluster.ControlPlaneHost,
+ClusterToken: utils.TransformToken(cluster.ClusterToken),
+UserOptions: cluster.Options,
+ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
+}
+if cluster.LocalImagesPath == """" {
+clusterContext.LocalImagesPath = filepath.Join(clusterContext.RootPath, ""opt/content/images"")
+} else {
+clusterContext.LocalImagesPath = cluster.LocalImagesPath
+}
+return clusterContext
+}"
+DISTRIBUTED_LOCK_MANAGEMENT,scripts/kube-upgrade.sh,98,111,"# Try to create an empty configmap in default namespace which will act as a lock, until it succeeds.
+# Once a node creates a configmap, other nodes will remain at this step until the first node deletes the configmap when upgrade completes.
+if [ ""$NODE_ROLE"" != ""worker"" ]
+then
+until kubectl --kubeconfig /etc/kubernetes/admin.conf create configmap upgrade-lock -n kube-system --from-literal=node=""${CURRENT_NODE_NAME}"" > /dev/null
+do
+upgrade_node=$(get_current_upgrading_node_name)
+if [ ""$upgrade_node"" = ""$CURRENT_NODE_NAME"" ]; then
+echo ""resuming upgrade""
+break
+fi
+echo ""failed to create configmap for upgrade lock, upgrading is going on the node ${upgrade_node}, retrying in 60 sec""
+sleep 60
+done
+fi"
+CERTIFICATE_REVISION_TRACKING,scripts/kube-reconfigure.sh,54,65,"certs_sans_revision_path=""$root_path/opt/kubeadm/certs_sans_revision""
+if [ -f ""$certs_sans_revision_path"" ]; then
+current_revision=$(cat ""$certs_sans_revision_path"")
+if [ ""$certs_sans_revision"" = ""$current_revision"" ]; then
+info ""no change in certs sans revision""
+return
+fi
+fi
+echo ""$certs_sans_revision"" > ""$certs_sans_revision_path"""
+MANUAL_REVIEW_HARDCODED_PATHS,stages/proxy.go,22,22,"Path: filepath.Join(""/etc/default"", ""kubelet"")"
+MANUAL_REVIEW_HARDCODED_PATHS,stages/proxy.go,27,27,"Path: filepath.Join(fmt.Sprintf(""/run/systemd/system/%s.service.d"", clusterCtx.ContainerdServiceFolderName), ""http-proxy.conf"")"
+MANUAL_REVIEW_SERVICE_WITHOUT_CHECK,scripts/kube-upgrade.sh,63,65,"systemctl stop kubelet
+cp /opt/kubeadm/bin/kubelet ""$root_path""/usr/local/bin/kubelet
+systemctl daemon-reload && systemctl restart kubelet"
+MANUAL_REVIEW_SERVICE_WITH_CHECK,scripts/kube-reset.sh,25,30,"if systemctl cat spectro-containerd >/dev/null 2<&1; then
+systemctl stop spectro-containerd
+fi
+if systemctl cat containerd >/dev/null 2<&1; then
+systemctl stop containerd
+fi"
+MANUAL_REVIEW_DUAL_MODE_PATH_HANDLING,scripts/kube-init.sh,9,10,"export PATH=""$PATH:$root_path/usr/bin""
+export PATH=""$PATH:$root_path/usr/local/bin"""
+MANUAL_REVIEW_DUAL_MODE_SOCKET_DETECTION,scripts/kube-init.sh,31,35,"if [ -S /run/spectro/containerd/containerd.sock ]; then
+kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
+else
+kubeadm reset -f --cleanup-tmp-dir
+fi"
+MANUAL_REVIEW_VERSION_CONSISTENCY,main.go,83,92,"cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterCtx.RootPath)
+if err != nil {
+logrus.Fatalf(""failed to check if kubeadm version is greater than 131: %v"", err)
+} else if cmpResult < 0 {
+logrus.Info(""kubeadm version is less than 1.31"")
+finalStages = append(finalStages, getV1Beta3FinalStage(clusterCtx)...)
+} else {
+logrus.Info(""kubeadm version is greater than or equal to 1.31"")
+finalStages = append(finalStages, getV1Beta4FinalStage(clusterCtx)...)
+}"
+MANUAL_REVIEW_FILEPATH_JOIN_GOOD,stages/init.go,79,79,"return utils.GetFileStage(""Generate Kubeadm Init Config File"", filepath.Join(rootPath, configurationPath, ""kubeadm.yaml""), kubeadmCfg)"
+MANUAL_REVIEW_FILEPATH_JOIN_GOOD,stages/pre.go,20,20,"fmt.Sprintf(""/bin/bash %s %s"", filepath.Join(rootPath, helperScriptPath, ""kube-pre-init.sh""), rootPath)"
+MANUAL_REVIEW_UNHANDLED_EXEC_BAD,main.go,68,69,"cmd := exec.Command(""/bin/sh"", ""-c"", filepath.Join(clusterRootPath, ""/opt/kubeadm/scripts"", ""kube-reset.sh""))"
+MANUAL_REVIEW_HANDLED_EXEC_GOOD,utils/misc.go,43,48,"cmd := exec.Command(kubeadmPath, ""version"", ""-o"", ""short"")
+output, err := cmd.CombinedOutput()
+if err != nil {
+return """", fmt.Errorf(""error getting current kubeadm version: %v"", err)
+}
+return strings.TrimSpace(string(output)), nil"
+MANUAL_REVIEW_REGISTRY_CONSISTENCY_CHECK,Earthfile,98,106,"RUN curl -L ""https://storage.googleapis.com/spectro-fips/cri-tools/v${CRICTL_VERSION}/cri-tools-${CRICTL_VERSION}-linux-amd64.tar.gz"" | sudo tar -C /usr/bin/ -xz
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubeadm
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubelet
+RUN curl -L --remote-name-all https://storage.googleapis.com/spectro-fips/${KUBEADM_VERSION}/kubectl
+RUN curl -L ""https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz"" | sudo tar -C /usr/bin/ -xz
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubeadm
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubelet
+RUN curl -L --remote-name-all https://dl.k8s.io/v${KUBEADM_VERSION}/bin/linux/amd64/kubectl"
+MANUAL_REVIEW_UNSAFE_RM_RF,scripts/kube-reset.sh,20,23,"rm -rf /etc/kubernetes/etcd
+rm -rf /etc/kubernetes/manifests
+rm -rf /etc/kubernetes/pki
+rm -rf /etc/containerd/config.toml"
+MANUAL_REVIEW_SERVICE_FOLDER_LOGIC,main.go,182,187,"func getContainerdServiceFolderName(options map[string]string) string {
+if _, ok := options[""spectro-containerd-service-name""]; ok {
+return ""spectro-containerd""
+}
+return ""containerd""
+}"

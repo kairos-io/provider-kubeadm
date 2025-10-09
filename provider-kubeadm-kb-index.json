@@ -1,0 +1,401 @@
+{
+  "topics": {
+    "security_patterns": {
+      "command_injection": {
+        "files": [
+          "main.go",
+          "utils/misc.go",
+          "stages/init.go",
+          "stages/pre.go"
+        ],
+        "line_ranges": ["68-69", "43-44", "93-94", "43-43"],
+        "grep_hints": ["exec.Command", "fmt.Sprintf.*bash", "/bin/sh", "sudo -E"],
+        "description": "Command execution patterns with security implications"
+      },
+      "cryptographic_operations": {
+        "files": [
+          "utils/certs.go"
+        ],
+        "line_ranges": ["10-14", "16-21", "23-28"],
+        "grep_hints": ["sha256.New", "hex.EncodeToString", "GetCertificateKey", "TransformToken"],
+        "description": "Certificate and token cryptographic operations"
+      },
+      "file_permissions": {
+        "files": [
+          "scripts/kube-reconfigure.sh",
+          "stages/pre.go"
+        ],
+        "line_ranges": ["127-136", "42-42"],
+        "grep_hints": ["chmod 600", "chown root:root", "chmod +x"],
+        "description": "File and directory permission management"
+      }
+    },
+    "stylus_root_handling": {
+      "files": [
+        "scripts/kube-reset.sh",
+        "scripts/kube-upgrade.sh",
+        "scripts/kube-pre-init.sh",
+        "scripts/kube-post-init.sh",
+        "scripts/kube-join.sh",
+        "scripts/kube-init.sh",
+        "scripts/kube-reconfigure.sh"
+      ],
+      "line_ranges": ["10-11", "17-18", "9-10", "9-10", "9-10", "9-10", "9-10"],
+      "grep_hints": ["STYLUS_ROOT", "stylus_root", "\\$STYLUS_ROOT", "export PATH.*root_path"],
+      "description": "Custom path handling for agent-mode clusters across all scripts"
+    },
+    "containerd_socket_detection": {
+      "files": [
+        "scripts/kube-init.sh",
+        "scripts/kube-join.sh", 
+        "scripts/kube-reset.sh",
+        "scripts/import.sh"
+      ],
+      "line_ranges": ["31-35", "34-35", "13-17", "11-15"],
+      "grep_hints": ["/run/spectro/containerd/containerd.sock", "--cri-socket", "containerd.sock"],
+      "description": "Containerd socket path detection and handling"
+    },
+    "kubeadm_reset_commands": {
+      "files": [
+        "scripts/kube-reset.sh",
+        "scripts/kube-init.sh",
+        "scripts/kube-join.sh"
+      ],
+      "line_ranges": ["13-17", "31-35", "34-38"],
+      "grep_hints": ["kubeadm reset", "--cri-socket", "--cleanup-tmp-dir"],
+      "description": "Kubeadm reset functionality with CRI socket handling"
+    },
+    "containerd_service_folder": {
+      "files": [
+        "main.go"
+      ],
+      "line_ranges": ["182-187"],
+      "grep_hints": ["spectro-containerd-service-name", "spectro-containerd", "containerd"],
+      "description": "Service folder name selection based on provider options"
+    },
+    "cluster_context": {
+      "files": [
+        "domain/cluster_context.go",
+        "main.go"
+      ],
+      "line_ranges": ["1-19", "104-122"],
+      "grep_hints": ["ClusterContext", "RootPath", "ContainerdServiceFolderName"],
+      "description": "Cluster context structure and creation"
+    },
+    "kubeadm_versions": {
+      "files": [
+        "main.go"
+      ],
+      "line_ranges": ["83-92", "124-146", "148-170"],
+      "grep_hints": ["IsKubeadmVersionGreaterThan131", "v1beta3", "v1beta4"],
+      "description": "Version detection and configuration handling"
+    },
+    "image_import": {
+      "files": [
+        "scripts/import.sh"
+      ],
+      "line_ranges": ["8-16"],
+      "grep_hints": ["ctr.*image import", "k8s.io", "--all-platforms"],
+      "description": "Container image import functionality"
+    },
+    "cluster_reset_handler": {
+      "files": [
+        "main.go"
+      ],
+      "line_ranges": ["42-76"],
+      "grep_hints": ["handleClusterReset", "EventClusterReset", "kube-reset.sh"],
+      "description": "Cluster reset event handling"
+    },
+    "build_configuration": {
+      "files": [
+        ".goreleaser.yaml",
+        "Earthfile"
+      ],
+      "line_ranges": ["1-10", "70-85"],
+      "grep_hints": ["agent-provider-kubeadm", "BUILD_GOLANG", "provider-kubeadm"],
+      "description": "Build and release configuration"
+    },
+    "scripts_directory": {
+      "files": [
+        "scripts/kube-init.sh",
+        "scripts/kube-join.sh",
+        "scripts/kube-post-init.sh",
+        "scripts/kube-pre-init.sh",
+        "scripts/kube-reconfigure.sh",
+        "scripts/kube-reset.sh",
+        "scripts/kube-upgrade.sh",
+        "scripts/kube-images-load.sh",
+        "scripts/import.sh"
+      ],
+      "line_ranges": ["all"],
+      "grep_hints": ["kubeadm", "containerd", "STYLUS_ROOT"],
+      "description": "Shell scripts for kubeadm lifecycle management"
+    }
+  },
+  "error_patterns": {
+    "critical_errors": {
+      "panic_errors": {
+        "patterns": ["panic", "fatal", "logrus.Fatal"],
+        "files": ["log/log.go", "main.go"],
+        "line_ranges": ["14", "37", "85"],
+        "category": "Application Crash"
+      },
+      "command_execution_errors": {
+        "patterns": ["exec.Command.*failed", "CombinedOutput.*error", "sudo.*failed"],
+        "files": ["main.go", "utils/misc.go"],
+        "line_ranges": ["68-72", "43-46"],
+        "category": "Command Execution"
+      },
+      "json_yaml_errors": {
+        "patterns": ["json.Unmarshal.*failed", "yaml.Unmarshal.*failed", "YAMLToJSON.*error"],
+        "files": ["main.go"],
+        "line_ranges": ["50-53", "57-60", "129-130", "153-154"],
+        "category": "Configuration Parsing"
+      }
+    },
+    "runtime_patterns": {
+      "retry_loops": {
+        "patterns": ["until.*kubectl", "until.*kubeadm", "for.*in.*{1..10}", "sleep.*[0-9]+"],
+        "files": ["scripts/kube-upgrade.sh", "scripts/kube-join.sh", "scripts/kube-init.sh", "scripts/import.sh"],
+        "line_ranges": ["102-111", "63-79", "60-77", "8-17"],
+        "category": "Retry Logic"
+      },
+      "version_handling": {
+        "patterns": ["version.*comparison", "v1beta3", "v1beta4", "IsKubeadmVersionGreaterThan"],
+        "files": ["main.go", "utils/misc.go"],
+        "line_ranges": ["83-92", "22-33"],
+        "category": "Version Compatibility"
+      },
+      "distributed_locking": {
+        "patterns": ["upgrade-lock", "configmap.*lock", "get_current_upgrading_node"],
+        "files": ["scripts/kube-upgrade.sh"],
+        "line_ranges": ["98-111", "40-40", "47-47"],
+        "category": "Cluster Coordination"
+      }
+    }
+  },
+  "troubleshooting_patterns": {
+    "provider_discovery_errors": {
+      "patterns": ["provider.*kubeadm", "failed.*discover.*provider", "no.*provider.*found"],
+      "log_files": ["journald/spectro-stylus-agent.log", "journald/stylus-agent.log"],
+      "category": "Provider Discovery"
+    },
+    "yip_stage_errors": {
+      "patterns": ["boot.before.*failed", "cos-setup-boot.*failed", "cluster.kairos.yaml"],
+      "log_files": ["journald/spectro-stylus-agent.log", "usr/local/cloud-config/cluster.kairos.yaml"],
+      "category": "YIP Stage Generation"
+    },
+    "cri_socket_errors": {
+      "patterns": ["socket.*not.*found", "/run/spectro/containerd/containerd.sock", "cri-socket"],
+      "log_files": ["var/log/provider-kubeadm.log", "journald/stylus-agent.log"],
+      "category": "CRI Socket"
+    },
+    "stylus_root_errors": {
+      "patterns": ["STYLUS_ROOT", "command.*not.*found.*usr/bin", "binary.*not.*found"],
+      "log_files": ["journald/stylus-agent.log", "var/log/stylus-agent.log"],
+      "category": "STYLUS_ROOT"
+    },
+    "kubeadm_failures": {
+      "patterns": ["kubeadm.*failed", "kubeadm.*error", "failed.*cluster.*init"],
+      "log_files": ["var/log/provider-kubeadm.log", "journald/k3s.log"],
+      "category": "Init Timeout"
+    },
+    "upgrade_failures": {
+      "patterns": ["upgrade.*failed", "SpectroSystemTask", "control-plane", "worker-plane"],
+      "log_files": ["var/log/stylus-upgrade-script-*.log", "k8s/cluster-resources/custom-resources/spectrosystemtasks.cluster.spectrocloud.com/"],
+      "category": "Upgrade Timeout"
+    },
+    "kubelet_version_mismatch": {
+      "patterns": ["proxy error.*10250", "502 Bad Gateway", "kubelet.*version"],
+      "log_files": ["var/log/stylus-agent.log", "journald/stylus-agent.log"],
+      "category": "Kubelet Version Mismatch"
+    },
+    "virtual_interface_errors": {
+      "patterns": ["scbr-100", "virtual.*interface", "cluster.*connectivity"],
+      "log_files": ["networking/ipaddrshow", "var/log/stylus-agent.log"],
+      "category": "Virtual Interface"
+    },
+    "certificate_errors": {
+      "patterns": ["certificate.*expired", "x509.*certificate", "TLS.*handshake.*failed"],
+      "log_files": ["var/log/provider-kubeadm.log", "journald/kubelet.log"],
+      "category": "Certificate Management"
+    },
+    "network_errors": {
+      "patterns": ["curl.*failed", "wget.*error", "connection.*refused.*6443"],
+      "log_files": ["var/log/provider-kubeadm.log", "journald/stylus-agent.log"],
+      "category": "Network Connectivity"
+    }
+  },
+  "manual_code_review_patterns": {
+    "immediate_rejection_flags": {
+      "hardcoded_paths_without_stylus_root": {
+        "patterns": ["^\\/usr\\/bin\\/", "^\\/etc\\/kubernetes\\/", "^\\/var\\/lib\\/kubelet"],
+        "files": ["scripts/*.sh", "stages/*.go", "main.go"],
+        "description": "New hardcoded system paths that don't handle STYLUS_ROOT agent-mode",
+        "grep_hints": ["grep -n '^\\/usr\\/bin\\/' scripts/", "grep -n '^\\/etc\\/kubernetes\\/' stages/"]
+      },
+      "unsafe_service_operations": {
+        "patterns": ["systemctl.*restart", "systemctl.*stop", "systemctl.*start"],
+        "files": ["scripts/*.sh"],
+        "description": "Service operations without existence validation",
+        "grep_hints": ["systemctl.*restart.*without.*cat", "systemctl.*stop.*without.*cat"]
+      },
+      "unhandled_exec_command": {
+        "patterns": ["exec\\.Command\\(.*\\)$", "cmd\\s*:=\\s*exec\\.Command.*\\n[^\\n]*err"],
+        "files": ["*.go"],
+        "description": "exec.Command calls without error handling",
+        "grep_hints": ["exec\\.Command", "CombinedOutput\\(\\).*err"]
+      },
+      "unsafe_destructive_operations": {
+        "patterns": ["rm\\s+-rf\\s+/", "rm\\s+-rf\\s+\\$"],
+        "files": ["scripts/*.sh"],
+        "description": "Destructive rm -rf without safety checks",
+        "grep_hints": ["rm\\s+-rf", "without.*safety.*check"]
+      }
+    },
+    "consistency_check_patterns": {
+      "dual_mode_compatibility": {
+        "files": ["scripts/kube-*.sh"],
+        "line_ranges": ["9-10", "31-35", "13-17"],
+        "check_points": [
+          "PATH extension includes both /usr/bin and /usr/local/bin",
+          "Socket detection handles both spectro and standard containerd",
+          "Service operations verify existence before restart"
+        ],
+        "grep_hints": ["export PATH.*STYLUS_ROOT", "containerd.*sock", "systemctl cat.*before"]
+      },
+      "version_logic_consistency": {
+        "files": ["main.go"],
+        "line_ranges": ["83-92", "124-146", "148-170"],
+        "check_points": [
+          "Both v1beta3 and v1beta4 code paths updated",
+          "Version comparison handles missing kubeadm",
+          "Error handling consistent across version branches"
+        ],
+        "grep_hints": ["IsKubeadmVersionGreaterThan131", "v1beta3.*v1beta4", "logrus\\.Fatal"]
+      },
+      "registry_url_consistency": {
+        "files": ["stages/init.go", "stages/join.go", "Earthfile"],
+        "description": "Registry URL changes must be applied consistently",
+        "grep_hints": ["registry.*url", "storage\\.googleapis", "dl\\.k8s\\.io"]
+      }
+    },
+    "path_handling_validation": {
+      "agent_mode_paths": {
+        "required_prefix": "$STYLUS_ROOT",
+        "files": ["scripts/*.sh", "stages/*.go"],
+        "validation_points": [
+          "All file operations check STYLUS_ROOT prefix",
+          "Binary paths use root_path variable",
+          "Service folder logic matches main.go:182-187"
+        ],
+        "grep_hints": ["\\$STYLUS_ROOT", "\\$root_path", "spectro-containerd.*containerd"]
+      },
+      "filepath_join_usage": {
+        "files": ["stages/*.go"],
+        "description": "Path construction must use filepath.Join not string concatenation",
+        "bad_patterns": ["\\+.*\"/\"", "fmt\\.Sprintf.*%s/"],
+        "good_patterns": ["filepath\\.Join"],
+        "grep_hints": ["filepath\\.Join", "string.*concatenation.*path"]
+      }
+    },
+    "peer_review_questions": {
+      "shell_script_changes": [
+        "Did you test this path exists in both agent-mode and appliance-mode?",
+        "Are all the commands in this script actually available on target systems?",
+        "Does this script handle the case where STYLUS_ROOT is unset?"
+      ],
+      "go_code_changes": [
+        "What happens if this exec.Command fails?",
+        "Did you check if this path works with custom root directories?",
+        "Is this change consistent with similar patterns elsewhere in the codebase?"
+      ],
+      "configuration_changes": [
+        "Does this preserve backward compatibility with existing clusters?",
+        "Did you verify the YAML syntax is valid?",
+        "Are registry URLs accessible from target environments?"
+      ]
+    },
+    "human_detectable_signs": {
+      "pattern_inconsistencies": [
+        "Code that looks 'different' from surrounding patterns",
+        "Missing error handling where other similar code has it",
+        "Inconsistent variable naming or path construction",
+        "Changes that affect one deployment mode but ignore the other"
+      ],
+      "common_oversights": [
+        "Service restart without validation",
+        "Registry URL inconsistency across files",
+        "Path handling gaps in STYLUS_ROOT patterns",
+        "Binary cleanup oversight in destructive operations"
+      ]
+    }
+  },
+  "key_commands": {
+    "live_host_diagnostics": [
+      "systemctl status kubelet containerd spectro-containerd",
+      "systemctl status cos-setup-boot.service cos-setup-fs.service cos-setup-network.service",
+      "journalctl -u kubelet --since '1 hour ago'",
+      "ls -la /run/containerd/containerd.sock /run/spectro/containerd/containerd.sock",
+      "crictl info",
+      "which kubeadm kubelet ctr",
+      "echo $STYLUS_ROOT",
+      "ip addr show scbr-100",
+      "ls -la /system/providers/*provider* /usr/local/system/providers/*provider*",
+      "cat /usr/local/cloud-config/cluster.kairos.yaml"
+    ],
+    "version_checks": [
+      "kubelet --version",
+      "kubeadm version", 
+      "crictl info | jq '.config.containerd.runtimes'",
+      "kubectl get pods -n kube-system -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.containers[0].image}{\"\\n\"}{end}'"
+    ],
+    "support_bundle_analysis": [
+      "grep -E '(failed|error|fatal)' journald/spectro-stylus-agent.log",
+      "grep -E 'provider.*kubeadm' journald/stylus-agent.log", 
+      "grep -E '(kubeadm.*failed|kubeadm.*error)' var/log/provider-kubeadm.log",
+      "grep 'socket.*not.*found' journald/stylus-agent.log",
+      "grep '/run/spectro/containerd/containerd.sock' var/log/ -R",
+      "grep 'STYLUS_ROOT' journald/stylus-agent.log",
+      "grep -E '(upgrade.*failed|SpectroSystemTask)' var/log/stylus-upgrade-script-*.log",
+      "grep -E 'proxy error.*10250' var/log/stylus-agent.log",
+      "grep -E '(panic|logrus.Fatal)' var/log/provider-kubeadm.log",
+      "grep -E '(exec.Command|CombinedOutput).*error' var/log/provider-kubeadm.log",
+      "grep -E '(json.Unmarshal|yaml.Unmarshal).*failed' var/log/provider-kubeadm.log",
+      "grep -E '(certificate.*expired|x509.*certificate)' var/log/provider-kubeadm.log journald/kubelet.log",
+      "grep -E '(curl.*failed|wget.*error|connection.*refused.*6443)' var/log/provider-kubeadm.log"
+    ],
+    "security_analysis": [
+      "grep -E '(exec.Command|sudo.*bash|chmod|chown)' var/log/provider-kubeadm.log",
+      "grep -E '(rm.*-rf|umount|iptables)' var/log/provider-kubeadm.log", 
+      "grep -E '(sha256|hex.EncodeToString|certificate|token)' var/log/provider-kubeadm.log",
+      "grep -E '(kubectl.*delete|kubeadm.*reset)' var/log/provider-kubeadm.log"
+    ],
+    "version_analysis": [
+      "grep -E '(version.*comparison|v1beta3|v1beta4)' var/log/provider-kubeadm.log",
+      "grep -E 'IsKubeadmVersionGreaterThan' var/log/provider-kubeadm.log",
+      "grep -E 'kubeadm.*version.*short' var/log/provider-kubeadm.log"
+    ],
+    "support_bundle_structure": {
+      "core_directories": [
+        "/k8s/cluster-resources/",
+        "/k8s/cluster-info/dump/", 
+        "/k8s/metrics/",
+        "/k8s/pod-logs/",
+        "/journald/",
+        "/var/log/",
+        "/networking/",
+        "/oem/",
+        "/usr/local/cloud-config/",
+        "/opt/spectrocloud/"
+      ],
+      "key_files": [
+        "journald/spectro-stylus-agent.log",
+        "var/log/provider-kubeadm.log",
+        "usr/local/cloud-config/cluster.kairos.yaml",
+        "k8s/cluster-resources/custom-resources/spectrosystemtasks.cluster.spectrocloud.com/",
+        "var/log/stylus-upgrade-script-*.log"
+      ]
+    }
+  }
+}

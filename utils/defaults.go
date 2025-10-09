@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -123,4 +124,25 @@ func appendIfNotPresent(slice []string, element string) []string {
 		}
 	}
 	return append(slice, element)
+}
+
+// GetKubeadmBinaryPath returns the correct path to the kubeadm binary,
+// considering custom STYLUS_ROOT paths for agent mode deployments.
+func GetKubeadmBinaryPath() string {
+	// Check if STYLUS_ROOT is set (agent mode)
+	if stylusRoot := os.Getenv("STYLUS_ROOT"); stylusRoot != "" {
+		// In agent mode, kubeadm is typically located at $STYLUS_ROOT/usr/bin/kubeadm
+		kubeadmPath := filepath.Join(stylusRoot, "usr", "bin", "kubeadm")
+		if _, err := os.Stat(kubeadmPath); err == nil {
+			return kubeadmPath
+		}
+		// Fallback to $STYLUS_ROOT/usr/local/bin/kubeadm
+		kubeadmPath = filepath.Join(stylusRoot, "usr", "local", "bin", "kubeadm")
+		if _, err := os.Stat(kubeadmPath); err == nil {
+			return kubeadmPath
+		}
+	}
+
+	// Default to system PATH (appliance mode or standard installation)
+	return "kubeadm"
 }
