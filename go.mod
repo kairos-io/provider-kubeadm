@@ -20,7 +20,7 @@ require (
 	k8s.io/component-helpers v0.27.1
 	k8s.io/kubelet v0.31.2
 	k8s.io/kubernetes v1.33.2
-	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
+	k8s.io/utils v0.0.0-20251218160917-61b37f7a4624
 	sigs.k8s.io/yaml v1.5.0
 )
 
