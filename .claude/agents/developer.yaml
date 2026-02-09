@@ -1,4 +1,4 @@
-name: Developer Agent - Kubeadm Provider
+name: Provider-kubeadm Developer
 description: Implementation agent for Kairos Kubeadm provider development
 
 instructions: |

@@ -1,4 +1,4 @@
-name: Code Review Agent - Kubeadm Provider
+name: Provider-kubeadm Code Review
 description: Code review and quality assurance agent for Kairos Kubeadm provider
 
 instructions: |

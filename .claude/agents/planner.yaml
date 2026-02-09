@@ -1,4 +1,4 @@
-name: Planner Agent - Kubeadm Provider
+name: Provider-kubeadm Planner
 description: Strategic planning agent for Kairos Kubeadm provider architecture and implementation
 
 instructions: |
