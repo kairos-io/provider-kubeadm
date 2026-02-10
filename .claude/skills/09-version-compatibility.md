@@ -1,3 +1,16 @@
+---
+skill: kubeadm Version Compatibility
+description: Skill documentation for provider-kubeadm
+type: general
+repository: provider-kubeadm
+team: edge
+topics: [kubernetes, provider, edge, cluster]
+difficulty: intermediate
+last_updated: 2026-02-09
+related_skills: []
+memory_references: []
+---
+
 # kubeadm Version Compatibility
 
 ## Overview
