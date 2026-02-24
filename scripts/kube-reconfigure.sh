@@ -157,20 +157,27 @@ update_file_permissions() {
     chmod 600 /etc/kubernetes/*.conf 2>/dev/null || true
   fi
   
-  # CNTR-K8-003120 - etcd must be owned by etcd (create etcd user if needed)
-  # Note: In containerized etcd (static pod), files are owned by root which is acceptable
-  # For standalone etcd, uncomment the following:
-  # if id "etcd" &>/dev/null; then
-  #   chown -R etcd:etcd /var/lib/etcd 2>/dev/null || true
-  # fi
+  # CNTR-K8-003120 - etcd must be owned by etcd
+  # Create etcd user/group if they don't exist
+  if ! getent group etcd &>/dev/null; then
+    groupadd --system etcd
+    info "Created etcd group"
+  fi
+  if ! id "etcd" &>/dev/null; then
+    useradd --system --gid etcd --no-create-home --shell /sbin/nologin etcd
+    info "Created etcd user"
+  fi
   
   # CNTR-K8-003260 - etcd data directory permissions
   if [ -d /var/lib/etcd ]; then
+    chown -R etcd:etcd /var/lib/etcd
     chmod 700 /var/lib/etcd
     find /var/lib/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
+    info "Set etcd data directory ownership to etcd:etcd"
   fi
   
   if [ -d /etc/kubernetes/etcd ]; then
+    chown -R etcd:etcd /etc/kubernetes/etcd
     chmod 700 /etc/kubernetes/etcd
     find /etc/kubernetes/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
   fi
