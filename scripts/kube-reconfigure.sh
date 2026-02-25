@@ -124,39 +124,18 @@ regenerate_etcd_manifests() {
 }
 
 update_file_permissions() {
-  info "Applying STIG hardening - file permissions and ownership"
-  
-  # CNTR-K8-000890 - Kubelet configuration files permissions
   chmod 600 /var/lib/kubelet/config.yaml
   chmod 600 /etc/systemd/system/kubelet.service
-  
-  # Kubelet additional files
-  if [ -f /var/lib/kubelet/kubeadm-flags.env ]; then
-    chmod 644 /var/lib/kubelet/kubeadm-flags.env
+
+  if [ -f /etc/kubernetes/pki/ca.crt ]; then
+    chmod 600 /etc/kubernetes/pki/ca.crt
   fi
 
-  # CNTR-K8-003150 - Kube Proxy kubeconfig must be owned by root
   if [ -f /etc/kubernetes/proxy.conf ]; then
     chown root:root /etc/kubernetes/proxy.conf
     chmod 600 /etc/kubernetes/proxy.conf
   fi
-  
-  # Kubernetes PKI files permissions
-  if [ -f /etc/kubernetes/pki/ca.crt ]; then
-    chmod 600 /etc/kubernetes/pki/ca.crt
-  fi
-  
-  if [ -d /etc/kubernetes/pki ]; then
-    find /etc/kubernetes/pki -type f -name "*.crt" -exec chmod 644 {} \;
-    find /etc/kubernetes/pki -type f -name "*.key" -exec chmod 600 {} \;
-  fi
-  
-  # Kubernetes config files ownership - must be owned by root
-  if [ -d /etc/kubernetes ]; then
-    chown root:root /etc/kubernetes/*.conf 2>/dev/null || true
-    chmod 600 /etc/kubernetes/*.conf 2>/dev/null || true
-  fi
-  
+
   # CNTR-K8-003120 - etcd must be owned by etcd
   # Create etcd user/group if they don't exist
   if ! getent group etcd &>/dev/null; then
@@ -167,7 +146,7 @@ update_file_permissions() {
     useradd --system --gid etcd --no-create-home --shell /sbin/nologin etcd
     info "Created etcd user"
   fi
-  
+
   # CNTR-K8-003260 - etcd data directory permissions
   if [ -d /var/lib/etcd ]; then
     chown -R etcd:etcd /var/lib/etcd
@@ -175,19 +154,12 @@ update_file_permissions() {
     find /var/lib/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
     info "Set etcd data directory ownership to etcd:etcd"
   fi
-  
+
   if [ -d /etc/kubernetes/etcd ]; then
     chown -R etcd:etcd /etc/kubernetes/etcd
     chmod 700 /etc/kubernetes/etcd
     find /etc/kubernetes/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
   fi
-  
-  # Kubernetes manifests permissions (static pods)
-  if [ -d /etc/kubernetes/manifests ]; then
-    chmod 600 /etc/kubernetes/manifests/*.yaml 2>/dev/null || true
-  fi
-  
-  info "STIG hardening - file permissions applied"
 }
 
 restart_kubelet
