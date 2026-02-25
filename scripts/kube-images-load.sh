@@ -12,6 +12,10 @@ set -ex
 KUBE_VERSION=$1
 
 ARCH=$(uname -m)
+# Convert aarch64 to arm64 for go-containerregistry compatibility
+if [ "$ARCH" = "aarch64" ]; then
+  ARCH="arm64"
+fi
 OS=$(uname)
 ARCHIVE_NAME=go-containerregistry_"${OS}"_"${ARCH}".tar.gz
 TEMP_DIR=/opt/kubeadm-temp
