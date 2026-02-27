@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/kairos-io/kairos-sdk v0.5.0
 	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
-	github.com/mudler/yip v1.16.3
+	github.com/mudler/yip v1.22.0
 	github.com/onsi/gomega v1.38.2
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/twpayne/go-vfs/v5 v5.0.1
