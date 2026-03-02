@@ -10,6 +10,12 @@ info() {
     echo "[INFO] " "$@"
 }
 
+get_etcd_data_dir() {
+  if [[ -f /etc/kubernetes/manifests/etcd.yaml ]]; then
+    grep -- '--data-dir=' /etc/kubernetes/manifests/etcd.yaml | sed 's/.*--data-dir=\([^ "]*\).*/\1/' | head -1
+  fi
+}
+
 node_role=$1
 certs_sans_revision=$2
 kubelet_envs=$3
@@ -148,17 +154,12 @@ update_file_permissions() {
   fi
 
   # CNTR-K8-003260 - etcd data directory permissions
-  if [ -d /var/lib/etcd ]; then
-    chown -R etcd:etcd /var/lib/etcd
-    chmod 700 /var/lib/etcd
-    find /var/lib/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
-    info "Set etcd data directory ownership to etcd:etcd"
-  fi
-
-  if [ -d /etc/kubernetes/etcd ]; then
-    chown -R etcd:etcd /etc/kubernetes/etcd
-    chmod 700 /etc/kubernetes/etcd
-    find /etc/kubernetes/etcd -type f -exec chmod 600 {} \; 2>/dev/null || true
+  ETCD_DATA_DIR=$(get_etcd_data_dir)
+  if [[ -n "$ETCD_DATA_DIR" && -d "$ETCD_DATA_DIR" ]]; then
+    chown -R etcd:etcd "$ETCD_DATA_DIR"
+    chmod 700 "$ETCD_DATA_DIR"
+    find "$ETCD_DATA_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
+    info "Set etcd data directory ($ETCD_DATA_DIR) ownership to etcd:etcd"
   fi
 }
 
