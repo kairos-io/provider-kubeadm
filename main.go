@@ -74,33 +74,32 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 		response.Error = fmt.Sprintf("failed to reset cluster: %s", string(output))
 	}
 
-	cleanupEtcd(config.Cluster.Options)
+	cleanupEtcd(clusterRootPath, config.Cluster.Options)
 
 	return response
 }
 
-func parseEtcdDataDir(userOptionsJSON []byte, defaultDir string) string {
-	var configV3 domain.KubeadmConfigBeta3
-	_ = json.Unmarshal(userOptionsJSON, &configV3)
-	if configV3.ClusterConfiguration.Etcd.Local != nil && configV3.ClusterConfiguration.Etcd.Local.DataDir != "" {
-		return configV3.ClusterConfiguration.Etcd.Local.DataDir
-	}
-
-	var configV4 domain.KubeadmConfigBeta4
-	_ = json.Unmarshal(userOptionsJSON, &configV4)
-	if configV4.ClusterConfiguration.Etcd.Local != nil && configV4.ClusterConfiguration.Etcd.Local.DataDir != "" {
-		return configV4.ClusterConfiguration.Etcd.Local.DataDir
-	}
-
-	return defaultDir
-}
-
-func cleanupEtcd(userOptions string) {
+func cleanupEtcd(clusterRootPath, userOptions string) {
 	etcdDataDir := domain.DefaultEtcdDataDir
 
 	if userOptions != "" {
-		if userOptionsJSON, err := kyaml.YAMLToJSON([]byte(userOptions)); err == nil {
-			etcdDataDir = parseEtcdDataDir(userOptionsJSON, etcdDataDir)
+		userOptionsJSON, _ := kyaml.YAMLToJSON([]byte(userOptions))
+
+		cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterRootPath)
+		if err != nil {
+			logrus.Warnf("failed to check kubeadm version: %v", err)
+		} else if cmpResult < 0 {
+			var kubeadmConfig domain.KubeadmConfigBeta3
+			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
+			if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+				etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+			}
+		} else {
+			var kubeadmConfig domain.KubeadmConfigBeta4
+			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
+			if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+				etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+			}
 		}
 	}
 
