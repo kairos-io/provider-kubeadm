@@ -79,16 +79,28 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 	return response
 }
 
+func parseEtcdDataDir(userOptionsJSON []byte, defaultDir string) string {
+	var configV3 domain.KubeadmConfigBeta3
+	_ = json.Unmarshal(userOptionsJSON, &configV3)
+	if configV3.ClusterConfiguration.Etcd.Local != nil && configV3.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		return configV3.ClusterConfiguration.Etcd.Local.DataDir
+	}
+
+	var configV4 domain.KubeadmConfigBeta4
+	_ = json.Unmarshal(userOptionsJSON, &configV4)
+	if configV4.ClusterConfiguration.Etcd.Local != nil && configV4.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		return configV4.ClusterConfiguration.Etcd.Local.DataDir
+	}
+
+	return defaultDir
+}
+
 func cleanupEtcd(userOptions string) {
 	etcdDataDir := domain.DefaultEtcdDataDir
 
 	if userOptions != "" {
-		var kubeadmConfig domain.KubeadmConfigBeta3
 		if userOptionsJSON, err := kyaml.YAMLToJSON([]byte(userOptions)); err == nil {
-			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
-		}
-		if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
-			etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+			etcdDataDir = parseEtcdDataDir(userOptionsJSON, etcdDataDir)
 		}
 	}
 
