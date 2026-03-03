@@ -109,12 +109,6 @@ func cleanupEtcd(clusterRootPath, userOptions string) {
 	} else {
 		logrus.Infof("removed etcd data directory: %s", etcdDataDir)
 	}
-	// Also remove default path if a custom one was configured
-	if etcdDataDir != domain.DefaultEtcdDataDir {
-		if err := os.RemoveAll(domain.DefaultEtcdDataDir); err != nil {
-			logrus.Warnf("failed to remove default etcd data directory: %v", err)
-		}
-	}
 
 	// Remove etcd user and group
 	if _, err := user.Lookup("etcd"); err == nil {
