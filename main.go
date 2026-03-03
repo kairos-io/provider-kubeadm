@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 
 	"github.com/kairos-io/kairos/provider-kubeadm/log"
@@ -72,7 +74,57 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 		response.Error = fmt.Sprintf("failed to reset cluster: %s", string(output))
 	}
 
+	cleanupEtcd(clusterRootPath, config.Cluster.Options)
+
 	return response
+}
+
+func cleanupEtcd(clusterRootPath, userOptions string) {
+	etcdDataDir := domain.DefaultEtcdDataDir
+
+	if userOptions != "" {
+		userOptionsJSON, _ := kyaml.YAMLToJSON([]byte(userOptions))
+
+		cmpResult, err := utils.IsKubeadmVersionGreaterThan131(clusterRootPath)
+		if err != nil {
+			logrus.Warnf("failed to check kubeadm version: %v", err)
+		} else if cmpResult < 0 {
+			var kubeadmConfig domain.KubeadmConfigBeta3
+			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
+			if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+				etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+			}
+		} else {
+			var kubeadmConfig domain.KubeadmConfigBeta4
+			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
+			if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+				etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+			}
+		}
+	}
+
+	// Remove etcd data directory
+	if err := os.RemoveAll(etcdDataDir); err != nil {
+		logrus.Warnf("failed to remove etcd data directory %s: %v", etcdDataDir, err)
+	} else {
+		logrus.Infof("removed etcd data directory: %s", etcdDataDir)
+	}
+
+	// Remove etcd user and group
+	if _, err := user.Lookup("etcd"); err == nil {
+		if out, err := exec.Command("userdel", "etcd").CombinedOutput(); err != nil {
+			logrus.Warnf("failed to delete etcd user: %s", string(out))
+		} else {
+			logrus.Info("deleted etcd user")
+		}
+	}
+	if _, err := user.LookupGroup("etcd"); err == nil {
+		if out, err := exec.Command("groupdel", "etcd").CombinedOutput(); err != nil {
+			logrus.Warnf("failed to delete etcd group: %s", string(out))
+		} else {
+			logrus.Info("deleted etcd group")
+		}
+	}
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
@@ -110,6 +162,7 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		ClusterToken:                utils.TransformToken(cluster.ClusterToken),
 		UserOptions:                 cluster.Options,
 		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
+		EtcdDataDir:                 domain.DefaultEtcdDataDir,
 	}
 
 	if cluster.LocalImagesPath == "" {
@@ -128,6 +181,10 @@ func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if clusterCtx.UserOptions != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+
+	if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		clusterCtx.EtcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
 	}
 
 	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
@@ -152,6 +209,10 @@ func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if clusterCtx.UserOptions != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+	
+	if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		clusterCtx.EtcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
 	}
 
 	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
