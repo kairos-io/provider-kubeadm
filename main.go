@@ -110,6 +110,7 @@ func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext 
 		ClusterToken:                utils.TransformToken(cluster.ClusterToken),
 		UserOptions:                 cluster.Options,
 		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),
+		EtcdDataDir:                 domain.DefaultEtcdDataDir,
 	}
 
 	if cluster.LocalImagesPath == "" {
@@ -128,6 +129,10 @@ func getV1Beta3FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if clusterCtx.UserOptions != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+
+	if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		clusterCtx.EtcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
 	}
 
 	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
@@ -152,6 +157,10 @@ func getV1Beta4FinalStage(clusterCtx *domain.ClusterContext) []yip.Stage {
 	if clusterCtx.UserOptions != "" {
 		userOptions, _ := kyaml.YAMLToJSON([]byte(clusterCtx.UserOptions))
 		_ = json.Unmarshal(userOptions, &kubeadmConfig)
+	}
+	
+	if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+		clusterCtx.EtcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
 	}
 
 	setClusterSubnetCtx(clusterCtx, kubeadmConfig.ClusterConfiguration.Networking.ServiceSubnet, kubeadmConfig.ClusterConfiguration.Networking.PodSubnet)
