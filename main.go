@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 
 	"github.com/kairos-io/kairos/provider-kubeadm/log"
@@ -72,7 +74,52 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 		response.Error = fmt.Sprintf("failed to reset cluster: %s", string(output))
 	}
 
+	cleanupEtcd(config.Cluster.Options)
+
 	return response
+}
+
+func cleanupEtcd(userOptions string) {
+	etcdDataDir := domain.DefaultEtcdDataDir
+
+	if userOptions != "" {
+		var kubeadmConfig domain.KubeadmConfigBeta3
+		if userOptionsJSON, err := kyaml.YAMLToJSON([]byte(userOptions)); err == nil {
+			_ = json.Unmarshal(userOptionsJSON, &kubeadmConfig)
+		}
+		if kubeadmConfig.ClusterConfiguration.Etcd.Local != nil && kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir != "" {
+			etcdDataDir = kubeadmConfig.ClusterConfiguration.Etcd.Local.DataDir
+		}
+	}
+
+	// Remove etcd data directory
+	if err := os.RemoveAll(etcdDataDir); err != nil {
+		logrus.Warnf("failed to remove etcd data directory %s: %v", etcdDataDir, err)
+	} else {
+		logrus.Infof("removed etcd data directory: %s", etcdDataDir)
+	}
+	// Also remove default path if a custom one was configured
+	if etcdDataDir != domain.DefaultEtcdDataDir {
+		if err := os.RemoveAll(domain.DefaultEtcdDataDir); err != nil {
+			logrus.Warnf("failed to remove default etcd data directory: %v", err)
+		}
+	}
+
+	// Remove etcd user and group
+	if _, err := user.Lookup("etcd"); err == nil {
+		if out, err := exec.Command("userdel", "etcd").CombinedOutput(); err != nil {
+			logrus.Warnf("failed to delete etcd user: %s", string(out))
+		} else {
+			logrus.Info("deleted etcd user")
+		}
+	}
+	if _, err := user.LookupGroup("etcd"); err == nil {
+		if out, err := exec.Command("groupdel", "etcd").CombinedOutput(); err != nil {
+			logrus.Warnf("failed to delete etcd group: %s", string(out))
+		} else {
+			logrus.Info("deleted etcd group")
+		}
+	}
 }
 
 func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {

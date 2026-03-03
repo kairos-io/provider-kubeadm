@@ -10,15 +10,6 @@ fi
 export PATH="$PATH:$STYLUS_ROOT/usr/bin"
 export PATH="$PATH:$STYLUS_ROOT/usr/local/bin"
 
-get_etcd_data_dir() {
-  if [[ -f /etc/kubernetes/manifests/etcd.yaml ]]; then
-    grep -- '--data-dir=' /etc/kubernetes/manifests/etcd.yaml | sed 's/.*--data-dir=\([^ "]*\).*/\1/' | head -1
-  fi
-}
-
-# Capture etcd data directory before kubeadm reset removes the manifest
-ETCD_DATA_DIR=$(get_etcd_data_dir)
-
 if [ -S /run/spectro/containerd/containerd.sock ]; then
     kubeadm reset -f --cri-socket unix:///run/spectro/containerd/containerd.sock --cleanup-tmp-dir
 else
@@ -67,18 +58,4 @@ rm -rf ${STYLUS_ROOT}/etc/systemd/system/spectro-containerd.service 2> /dev/null
 rm -rf /var/log/kube*.log
 rm -rf /var/log/apiserver
 rm -rf /var/log/pods
-
-# Cleanup etcd data directory
-if [[ -n "$ETCD_DATA_DIR" && -d "$ETCD_DATA_DIR" ]]; then
-  rm -rf "$ETCD_DATA_DIR"
-fi
-rm -rf /var/lib/etcd
-
-# Cleanup etcd user and group
-if id "etcd" &>/dev/null; then
-  userdel etcd
-fi
-if getent group etcd &>/dev/null; then
-  groupdel etcd
-fi
 
