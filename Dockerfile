@@ -8,7 +8,7 @@ ARG KUBEADM_VERSION=latest
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0 # Update newer? e.g. https://github.com/kubernetes/release/releases/tag/v0.18.0
 ARG FIPS_ENABLED=false
-ARG KAIROS_INIT_VERSION=v0.6.0
+ARG KAIROS_INIT_VERSION=v0.7.1
 ARG VERSION=latest
 
 # Stage 1: Get kairos-init binary
