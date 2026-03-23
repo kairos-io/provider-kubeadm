@@ -133,8 +133,16 @@ run_upgrade() {
               continue
             fi
 
-            if [ "$master_api_version" = "$old_version" ]
+            # If the ConfigMap already shows the target version, another node has
+            # already run 'upgrade apply' — this node only needs 'upgrade node'.
+            # Otherwise run 'upgrade apply' to bring the ConfigMap up to date.
+            # This covers both the normal case (ConfigMap == old_version) and the
+            # stale-ConfigMap case where a previous upgrade failed to update it.
+            if [ "$master_api_version" != "$current_version" ]
             then
+                if [ "$master_api_version" != "$old_version" ]; then
+                  echo "WARNING: kubeadm-config ConfigMap kubernetesVersion=$master_api_version does not match expected $old_version — ConfigMap is stale from a previous incomplete upgrade"
+                fi
                 apply_new_kubeadm_config
                 upgrade_command="kubeadm upgrade apply -y $current_version"
                 if [ "$PROXY_CONFIGURED" = true ]; then
