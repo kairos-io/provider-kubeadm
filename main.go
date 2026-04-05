@@ -65,7 +65,7 @@ func handleClusterReset(event *pluggable.Event) pluggable.EventResponse {
 	}
 
 	clusterRootPath := utils.GetClusterRootPath(*config.Cluster)
-	cmd := exec.Command("/bin/sh", "-c", filepath.Join(clusterRootPath, "/opt/kubeadm/scripts", "kube-reset.sh"))
+	cmd := exec.Command("/bin/sh", "-c", filepath.Join(clusterRootPath, "opt/kubeadm/scripts", "kube-reset.sh"))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		logrus.Error(fmt.Sprintf("failed to reset cluster: %s", string(output)))
