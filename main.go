@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os/exec"
 	"path/filepath"
 
@@ -102,11 +103,17 @@ func clusterProvider(cluster clusterplugin.Cluster) yip.YipConfig {
 }
 
 func CreateClusterContext(cluster clusterplugin.Cluster) *domain.ClusterContext {
+	controlPlaneHost := cluster.ControlPlaneHost
+
+	if _, _, err := net.SplitHostPort(controlPlaneHost); err != nil {
+		controlPlaneHost = net.JoinHostPort(controlPlaneHost, "6443")
+	}
+
 	clusterContext := &domain.ClusterContext{
 		RootPath:                    utils.GetClusterRootPath(cluster),
 		NodeRole:                    string(cluster.Role),
 		EnvConfig:                   cluster.Env,
-		ControlPlaneHost:            cluster.ControlPlaneHost,
+		ControlPlaneHost:            controlPlaneHost,
 		ClusterToken:                utils.TransformToken(cluster.ClusterToken),
 		UserOptions:                 cluster.Options,
 		ContainerdServiceFolderName: getContainerdServiceFolderName(cluster.ProviderOptions),

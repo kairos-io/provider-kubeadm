@@ -12,10 +12,11 @@ import (
 	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 	yip "github.com/mudler/yip/pkg/schema"
 	"k8s.io/cli-runtime/pkg/printers"
 	kubeadmapiv3 "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+
+	"github.com/kairos-io/kairos/provider-kubeadm/utils"
 )
 
 func GetJoinYipStagesV1Beta3(clusterCtx *domain.ClusterContext, kubeadmConfig domain.KubeadmConfigBeta3) []yip.Stage {
@@ -70,7 +71,7 @@ func getJoinNodeConfigurationBeta3(clusterCtx *domain.ClusterContext, joinCfg ku
 	if joinCfg.Discovery.BootstrapToken == nil {
 		joinCfg.Discovery.BootstrapToken = &kubeadmapiv3.BootstrapTokenDiscovery{
 			Token:                    clusterCtx.ClusterToken,
-			APIServerEndpoint:        fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost),
+			APIServerEndpoint:        clusterCtx.ControlPlaneHost,
 			UnsafeSkipCAVerification: true,
 		}
 	}
@@ -108,7 +109,7 @@ func getJoinNodeConfigurationBeta4(clusterCtx *domain.ClusterContext, joinCfg ku
 	if joinCfg.Discovery.BootstrapToken == nil {
 		joinCfg.Discovery.BootstrapToken = &kubeadmapiv4.BootstrapTokenDiscovery{
 			Token:                    clusterCtx.ClusterToken,
-			APIServerEndpoint:        fmt.Sprintf("%s:6443", clusterCtx.ControlPlaneHost),
+			APIServerEndpoint:        clusterCtx.ControlPlaneHost,
 			UnsafeSkipCAVerification: true,
 		}
 	}
