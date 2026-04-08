@@ -4,6 +4,7 @@ go 1.25.7
 
 require (
 	github.com/kairos-io/kairos-sdk v0.5.0
+	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5
 	github.com/mudler/yip v1.16.3
 	github.com/onsi/gomega v1.38.2
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
@@ -51,7 +52,6 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mudler/go-pluggable v0.0.0-20230126220627-7710299a0ae5 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -81,4 +81,26 @@ require (
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+)
+
+replace (
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v1.33.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v1.33.2
+	k8s.io/code-generator => k8s.io/code-generator v1.33.2
+	k8s.io/controller-manager => k8s.io/controller-manager v1.33.2
+	k8s.io/cri-client => k8s.io/cri-client v1.33.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v1.33.2
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v1.33.2
+	k8s.io/endpointslice => k8s.io/endpointslice v1.33.2
+	k8s.io/externaljwt => k8s.io/externaljwt v1.33.2
+	k8s.io/kms => k8s.io/kms v1.33.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v1.33.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v1.33.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v1.33.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v1.33.2
+	k8s.io/kubectl => k8s.io/kubectl v1.33.2
+	k8s.io/metrics => k8s.io/metrics v1.33.2
+	k8s.io/mount-utils => k8s.io/mount-utils v1.33.2
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v1.33.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v1.33.2
 )
