@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/kairos-io/kairos-sdk/clusterplugin"
-	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 	yip "github.com/mudler/yip/pkg/schema"
 	. "github.com/onsi/gomega"
+
+	"github.com/kairos-io/kairos/provider-kubeadm/domain"
 )
 
 // TestCreateClusterContext tests the CreateClusterContext function
@@ -28,7 +29,7 @@ func TestCreateClusterContext(t *testing.T) {
 	// Basic validations
 	g.Expect(result.RootPath).To(Equal("/"))
 	g.Expect(result.NodeRole).To(Equal("init"))
-	g.Expect(result.ControlPlaneHost).To(Equal("10.0.0.1"))
+	g.Expect(result.ControlPlaneHost).To(Equal("10.0.0.1:6443"))
 	// The token is transformed using SHA256 hash, so we just check it's not empty and has the expected format
 	g.Expect(result.ClusterToken).ToNot(BeEmpty())
 	g.Expect(result.ClusterToken).To(MatchRegexp(`^[a-f0-9]{6}\.[a-f0-9]{16}$`))
@@ -62,7 +63,7 @@ func TestCreateClusterContextComprehensive(t *testing.T) {
 			},
 			expectedRootPath:                "/persistent/spectro",
 			expectedNodeRole:                "controlplane",
-			expectedControlPlaneHost:        "192.168.1.100",
+			expectedControlPlaneHost:        "192.168.1.100:6443",
 			expectedContainerdServiceFolder: "containerd",
 			expectedLocalImagesPath:         "/persistent/spectro/opt/content/images",
 		},
@@ -70,7 +71,7 @@ func TestCreateClusterContextComprehensive(t *testing.T) {
 			name: "spectro_containerd_with_custom_images",
 			cluster: clusterplugin.Cluster{
 				Role:             clusterplugin.RoleWorker,
-				ControlPlaneHost: "master.k8s.local",
+				ControlPlaneHost: "master.k8s.local:7443",
 				ClusterToken:     "special-token.1234567890123456",
 				LocalImagesPath:  "/custom/images/path",
 				ProviderOptions: map[string]string{
@@ -85,7 +86,7 @@ func TestCreateClusterContextComprehensive(t *testing.T) {
 			},
 			expectedRootPath:                "/mnt/custom",
 			expectedNodeRole:                "worker",
-			expectedControlPlaneHost:        "master.k8s.local",
+			expectedControlPlaneHost:        "master.k8s.local:7443",
 			expectedContainerdServiceFolder: "spectro-containerd",
 			expectedLocalImagesPath:         "/custom/images/path",
 			validateEnvConfig: func(t *testing.T, env map[string]string) {
