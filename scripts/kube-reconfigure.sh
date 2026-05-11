@@ -42,9 +42,9 @@ fi
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
 regenerate_kube_components_manifests() {
-  sudo -E bash -c "kubeadm init phase control-plane apiserver --config $root_path/opt/kubeadm/cluster-config.yaml"
-  sudo -E bash -c "kubeadm init phase control-plane controller-manager --config $root_path/opt/kubeadm/cluster-config.yaml"
-  sudo -E bash -c "kubeadm init phase control-plane scheduler --config $root_path/opt/kubeadm/cluster-config.yaml"
+  kubeadm init phase control-plane apiserver --config "$root_path"/opt/kubeadm/cluster-config.yaml
+  kubeadm init phase control-plane controller-manager --config "$root_path"/opt/kubeadm/cluster-config.yaml
+  kubeadm init phase control-plane scheduler --config "$root_path"/opt/kubeadm/cluster-config.yaml
 
   kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/cluster-config.yaml
 

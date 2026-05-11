@@ -153,7 +153,7 @@ run_upgrade() {
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
 
-        if sudo -E bash -c "$upgrade_command"
+        if bash -c "$upgrade_command"
         then
             # Update current client version in the version file
             echo "$current_version" > "$root_path"/opt/sentinel_kubeadmversion
