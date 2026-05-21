@@ -20,7 +20,13 @@ import (
 )
 
 func MutateClusterConfigBeta3Defaults(clusterCtx *domain.ClusterContext, clusterCfg *kubeadmapiv3.ClusterConfiguration) {
-	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, clusterCtx.ControlPlaneHost)
+	host, _, err := net.SplitHostPort(clusterCtx.ControlPlaneHost)
+	if err != nil {
+		// should not happen, but fail safe:
+		// ControlPlaneHost is already parsed with port.
+		host = clusterCtx.ControlPlaneHost
+	}
+	clusterCfg.APIServer.CertSANs = appendIfNotPresent(clusterCfg.APIServer.CertSANs, host)
 	clusterCfg.ControlPlaneEndpoint = clusterCtx.ControlPlaneHost
 
 	if clusterCfg.ImageRepository == "" {
