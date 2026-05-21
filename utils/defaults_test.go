@@ -16,7 +16,7 @@ func TestMutateClusterConfigBeta3Defaults(t *testing.T) {
 		g := NewWithT(t)
 
 		clusterCtx := &domain.ClusterContext{
-			ControlPlaneHost: "10.0.0.1",
+			ControlPlaneHost: "10.0.0.1:6443",
 			ClusterToken:     "test-token.1234567890123456",
 		}
 
@@ -24,9 +24,11 @@ func TestMutateClusterConfigBeta3Defaults(t *testing.T) {
 
 		MutateClusterConfigBeta3Defaults(clusterCtx, clusterConfig)
 
-		// Validate that the function executes without error
-		// The actual mutations depend on the implementation details
-		g.Expect(clusterConfig).ToNot(BeNil())
+		// certSANs must contain only the host, not host:port
+		g.Expect(clusterConfig.APIServer.CertSANs).To(ContainElement("10.0.0.1"))
+		g.Expect(clusterConfig.APIServer.CertSANs).NotTo(ContainElement("10.0.0.1:6443"))
+		// ControlPlaneEndpoint retains the port
+		g.Expect(clusterConfig.ControlPlaneEndpoint).To(Equal("10.0.0.1:6443"))
 	})
 }
 
