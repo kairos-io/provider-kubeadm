@@ -9,7 +9,7 @@ ARG RELEASE_VERSION=0.4.0
 
 ARG LUET_VERSION=0.35.1
 ARG GOLINT_VERSION=v2.4.0
-ARG GOLANG_VERSION=1.25
+ARG GOLANG_VERSION=1.26.3
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
@@ -27,7 +27,7 @@ build-cosign:
     SAVE ARTIFACT /ko-app/cosign cosign
 
 go-deps:
-    FROM us-docker.pkg.dev/palette-images/build-base-images/golang:${GOLANG_VERSION}-alpine
+    FROM us-central1-docker.pkg.dev/palette-images-dev/hardened-images/builder/golang:${GOLANG_VERSION}-alpine
     WORKDIR /build
     COPY go.mod go.sum ./
     RUN go mod download
