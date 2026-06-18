@@ -61,7 +61,7 @@ restart_containerd() {
 upgrade_kubelet() {
   echo "upgrading kubelet"
   systemctl stop kubelet
-  cp /opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
+  cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl daemon-reload && systemctl restart kubelet
   restart_containerd
   echo "kubelet upgraded"
