@@ -86,11 +86,21 @@ start_kubelet() {
   fi
 
   echo "waiting for kubelet to be ready"
-  until systemctl is-active --quiet kubelet && kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes >/dev/null 2>&1
-  do
-    echo "kubelet or API server not ready yet, retrying in 10 seconds"
-    sleep 10
-  done
+  # Workers have no admin.conf; probe via kubelet.conf against the self Node
+  # (permitted by the system:node identity's RBAC).
+  if [ "$NODE_ROLE" = "worker" ]; then
+    until systemctl is-active --quiet kubelet && kubectl --kubeconfig /etc/kubernetes/kubelet.conf get node "$CURRENT_NODE_NAME" >/dev/null 2>&1
+    do
+      echo "kubelet or API server not ready yet, retrying in 10 seconds"
+      sleep 10
+    done
+  else
+    until systemctl is-active --quiet kubelet && kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes >/dev/null 2>&1
+    do
+      echo "kubelet or API server not ready yet, retrying in 10 seconds"
+      sleep 10
+    done
+  fi
   echo "kubelet is ready"
 }
 
