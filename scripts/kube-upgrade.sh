@@ -61,7 +61,7 @@ restart_containerd() {
 upgrade_kubelet() {
   echo "upgrading kubelet"
   systemctl stop kubelet
-  cp /opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
+  cp "$root_path"/opt/kubeadm/bin/kubelet "$root_path"/usr/local/bin/kubelet
   systemctl daemon-reload && systemctl restart kubelet
   restart_containerd
   echo "kubelet upgraded"
@@ -74,6 +74,34 @@ apply_new_kubeadm_config() {
 
 revert_kubeadm_config() {
   kubeadm init phase upload-config kubeadm --config "$root_path"/opt/kubeadm/existing-cluster-config.yaml
+}
+
+start_kubelet() {
+  if ! systemctl is-enabled --quiet kubelet; then
+    systemctl enable kubelet
+  fi
+
+  if ! systemctl is-active --quiet kubelet; then
+    systemctl start kubelet
+  fi
+
+  echo "waiting for kubelet to be ready"
+  # Workers have no admin.conf; probe via kubelet.conf against the self Node
+  # (permitted by the system:node identity's RBAC).
+  if [ "$NODE_ROLE" = "worker" ]; then
+    until systemctl is-active --quiet kubelet && kubectl --kubeconfig /etc/kubernetes/kubelet.conf get node "$CURRENT_NODE_NAME" >/dev/null 2>&1
+    do
+      echo "kubelet or API server not ready yet, retrying in 10 seconds"
+      sleep 10
+    done
+  else
+    until systemctl is-active --quiet kubelet && kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes >/dev/null 2>&1
+    do
+      echo "kubelet or API server not ready yet, retrying in 10 seconds"
+      sleep 10
+    done
+  fi
+  echo "kubelet is ready"
 }
 
 run_upgrade() {
@@ -94,6 +122,7 @@ run_upgrade() {
     fi
 
     # Proceed to do upgrade operation
+    start_kubelet
 
     # Try to create an empty configmap in default namespace which will act as a lock, until it succeeds.
     # Once a node creates a configmap, other nodes will remain at this step until the first node deletes the configmap when upgrade completes.
