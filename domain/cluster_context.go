@@ -13,6 +13,13 @@ type ClusterContext struct {
 	LocalImagesPath             string `json:"localImagesPath" yaml:"localImagesPath"`
 	CustomNodeIp                string `json:"customNodeIp" yaml:"customNodeIp"`
 	ContainerdServiceFolderName string `json:"containerdServiceFolderName" yaml:"containerdServiceFolderName"`
+	KubernetesVersion           string `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 
 	EnvConfig map[string]string `json:"envConfig" yaml:"envConfig"`
+}
+
+type ClusterOptions struct {
+	ClusterConfig struct {
+		KubernetesVersion string `yaml:"kubernetesVersion" json:"kubernetesVersion"`
+	} `yaml:"clusterConfiguration" json:"clusterConfiguration"`
 }

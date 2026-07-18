@@ -12,9 +12,17 @@ root_path=$1
 export PATH="$PATH:$root_path/usr/bin"
 export PATH="$PATH:$root_path/usr/local/bin"
 
-sysctl --system
 modprobe overlay
 modprobe br_netfilter
+
+if command -v sysctl >/dev/null 2>&1; then
+    sysctl --system
+elif [ -x /usr/lib/systemd/systemd-sysctl ]; then
+    /usr/lib/systemd/systemd-sysctl
+else
+    echo "WARNING: no sysctl implementation found" >&2
+fi
+
 systemctl daemon-reload
 
 if [ -f "$root_path"/opt/spectrocloud/kubeadm/bin/kubelet ]; then
