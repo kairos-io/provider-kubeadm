@@ -412,6 +412,8 @@ github.com/twpayne/go-vfs/v4 v4.3.0 h1:rTqFzzOQ/6ESKTSiwVubHlCBedJDOhQyVSnw8rQNZ
 github.com/twpayne/go-vfs/v4 v4.3.0/go.mod h1:tq2UVhnUepesc0lSnPJH/jQ8HruGhzwZe2r5kDFpEIw=
 github.com/twpayne/go-vfs/v5 v5.0.1 h1:5g2H6D/r4BlukZn21ysaPqracmsNb2lRCoiJt55tjqk=
 github.com/twpayne/go-vfs/v5 v5.0.1/go.mod h1:x4tZII+nP25/KlZ2lTPXxnTiS1ZSE10yNJ/mGiBoR8s=
+github.com/twpayne/go-vfs/v5 v5.0.5 h1:s+Rb66vj0Y8waQV3xndzjh/qdZNiOWEpnCctM2cHWaA=
+github.com/twpayne/go-vfs/v5 v5.0.5/go.mod h1:AF7wvxTGEE0XnSdtHXKwHY8vcanqhFga27BhJYHUvMo=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
