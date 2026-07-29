@@ -1,9 +1,5 @@
-VERSION 0.7
+VERSION 0.6
 FROM alpine
-
-ARG --global SPECTRO_VERSION=0.0.0-dev
-ARG --global UPSTREAM_VERSION=v4.9.0
-ARG --global VERSION=${UPSTREAM_VERSION}-spectro-${SPECTRO_VERSION}
 
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE=quay.io/kairos/opensuse:leap-15.5-core-amd64-generic-v2.4.3
@@ -55,7 +51,9 @@ BUILD_GOLANG:
 
 VERSION:
     COMMAND
-    ARG VERSION                     # inherits from global (or --build-arg)
+    ARG SPECTRO_VERSION=0.0.0-dev
+    ARG UPSTREAM_VERSION=v4.9.0
+    ARG VERSION=${UPSTREAM_VERSION}-spectro-${SPECTRO_VERSION}
     FROM alpine
     RUN echo "$VERSION" > VERSION
     SAVE ARTIFACT VERSION VERSION
