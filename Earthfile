@@ -51,11 +51,11 @@ BUILD_GOLANG:
 
 VERSION:
     COMMAND
-    ARG SPECTRO_VERSION=0.0.0-dev
     ARG UPSTREAM_VERSION=v4.9.0
-    ARG VERSION=${UPSTREAM_VERSION}-spectro-${SPECTRO_VERSION}
     FROM alpine
-    RUN echo "$VERSION" > VERSION
+    COPY .spectro-version .spectro-version
+    RUN SPECTRO_VERSION=$(cat .spectro-version) && \
+        echo "${UPSTREAM_VERSION}-spectro-${SPECTRO_VERSION}" > VERSION
     SAVE ARTIFACT VERSION VERSION
 
 build-provider:
