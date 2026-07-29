@@ -1,4 +1,4 @@
-VERSION 0.6
+VERSION 0.7
 FROM alpine
 
 ARG --global SPECTRO_VERSION=0.0.0-dev
