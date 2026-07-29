@@ -1,17 +1,18 @@
 VERSION 0.6
 FROM alpine
 
+ARG --global SPECTRO_VERSION=0.0.0-dev
+ARG --global UPSTREAM_VERSION=v4.9.0
+ARG --global VERSION=${UPSTREAM_VERSION}-spectro-${SPECTRO_VERSION}
+
 ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE=quay.io/kairos/opensuse:leap-15.5-core-amd64-generic-v2.4.3
 ARG IMAGE_REPOSITORY=quay.io/kairos
 ARG CRICTL_VERSION=1.25.0
 ARG RELEASE_VERSION=0.4.0
-
 ARG LUET_VERSION=0.35.1
 ARG GOLINT_VERSION=v2.4.0
 ARG GOLANG_VERSION=1.26.5
-
-ARG KUBEADM_VERSION=latest
 ARG BASE_IMAGE_NAME=$(echo $BASE_IMAGE | grep -o [^/]*: | rev | cut -c2- | rev)
 ARG BASE_IMAGE_TAG=$(echo $BASE_IMAGE | grep -o :.* | cut -c2-)
 ARG KUBEADM_VERSION_TAG=$(echo $KUBEADM_VERSION | sed s/+/-/)
@@ -41,11 +42,8 @@ BUILD_GOLANG:
     COPY . ./
     ARG BIN
     ARG SRC
-
     ARG VERSION
-
     ENV GO_LDFLAGS=" -X github.com/kairos-io/kairos/provider-kubeadm/version.Version=${VERSION} -w -s"
-
     IF $FIPS_ENABLED
         RUN go-build-fips.sh -a -o ${BIN} ./${SRC}
         RUN assert-fips.sh ${BIN}
@@ -53,27 +51,20 @@ BUILD_GOLANG:
     ELSE
         RUN go-build-static.sh -a -o ${BIN} ./${SRC}
     END
-
     SAVE ARTIFACT ${BIN} ${BIN} AS LOCAL build/${BIN}
 
 VERSION:
     COMMAND
+    ARG VERSION                     # inherits from global (or --build-arg)
     FROM alpine
-    RUN apk add git
-
-    COPY .git/ .git
-
-    RUN echo $(git describe --exact-match --tags || echo "v0.0.0-$(git rev-parse --short=8 HEAD)") > VERSION
-
+    RUN echo "$VERSION" > VERSION
     SAVE ARTIFACT VERSION VERSION
 
 build-provider:
     DO +VERSION
     ARG VERSION=$(cat VERSION)
-
     FROM +go-deps
     DO +BUILD_GOLANG --BIN=agent-provider-kubeadm --SRC=main.go --VERSION=$VERSION
-
     SAVE ARTIFACT agent-provider-kubeadm
 
 build-provider-package:
@@ -109,7 +100,6 @@ DOWNLOAD_BINARIES:
 SETUP_CONTAINERD:
     COMMAND
     RUN mkdir -p /opt/cni/bin
-
     IF $FIPS_ENABLED
         RUN curl -sSL https://storage.googleapis.com/spectro-fips/containerd/v1.6.4/containerd-1.6.4-linux-amd64.tar.gz | sudo tar -C /opt/ -xz
         RUN curl -SL -o runc https://storage.googleapis.com/spectro-fips/runc-1.1.4/runc
@@ -119,7 +109,6 @@ SETUP_CONTAINERD:
         RUN curl -SL -o runc "https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64"
         RUN curl -sSL https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz | sudo tar -C /opt/cni/bin/ -xz
     END
-
     RUN install -m 755 runc /opt/bin/runc
     RUN curl -sSL "https://raw.githubusercontent.com/containerd/containerd/main/containerd.service" | sed "s?ExecStart=/usr/local/bin/containerd?ExecStart=/opt/bin/containerd?" | sudo tee /etc/systemd/system/containerd.service
 
@@ -137,33 +126,24 @@ SAVE_IMAGE:
 docker:
     DO +VERSION
     ARG VERSION=$(cat VERSION)
-
     FROM $BASE_IMAGE
-
     WORKDIR /usr/bin
-
     DO +DOWNLOAD_BINARIES
-
     RUN chmod +x kubeadm
     RUN chmod +x kubelet
     RUN chmod +x kubectl
-
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sudo tee /etc/systemd/system/kubelet.service
     RUN mkdir -p /etc/systemd/system/kubelet.service.d
     RUN curl -sSL "https://raw.githubusercontent.com/kubernetes/release/v${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
     COPY +luet/luet /usr/bin/luet
-
     WORKDIR /
-
     DO +SETUP_CONTAINERD
-
     ENV OS_ID=${BASE_IMAGE_NAME}-kubeadm
     ENV OS_NAME=$OS_ID:${BASE_IMAGE_TAG}
     ENV OS_REPO=${IMAGE_REPOSITORY}
     ENV OS_VERSION=${KUBEADM_VERSION_TAG}_${VERSION}
     ENV OS_LABEL=${BASE_IMAGE_TAG}_${KUBEADM_VERSION_TAG}_${VERSION}
     RUN envsubst >>/etc/os-release </usr/lib/os-release.tmpl
-
     COPY containerd/config.toml /etc/containerd/config.toml
     RUN cp -R /opt/bin/ctr /usr/bin/ctr
     RUN mkdir -p /opt/kubeadm/scripts
@@ -171,43 +151,31 @@ docker:
     IF ! "$FIPS_ENABLED"
         RUN bash /opt/kubeadm/scripts/kube-images-load.sh ${KUBEADM_VERSION}
     END
-
     RUN echo "overlay" >> /etc/modules-load.d/k8s.conf
     RUN echo "br_netfilter" >> /etc/modules-load.d/k8s.conf
-
     RUN echo net.bridge.bridge-nf-call-iptables=1 >> /etc/sysctl.d/k8s.conf
     RUN echo net.bridge.bridge-nf-call-ip6tables=1 >> /etc/sysctl.d/k8s.conf
     RUN echo net.ipv4.ip_forward=1 >> /etc/sysctl.d/k8s.conf
-
     COPY +build-provider/agent-provider-kubeadm /system/providers/agent-provider-kubeadm
-
     DO +SAVE_IMAGE --VERSION=$VERSION
 
 cosign:
     ARG --required ACTIONS_ID_TOKEN_REQUEST_TOKEN
     ARG --required ACTIONS_ID_TOKEN_REQUEST_URL
-
     ARG --required REGISTRY
     ARG --required REGISTRY_USER
     ARG --required REGISTRY_PASSWORD
-
     DO +VERSION
     ARG VERSION=$(cat VERSION)
-
     FROM docker
-
     ENV ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN}
     ENV ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL}
-
     ENV REGISTRY=${REGISTRY}
     ENV REGISTRY_USER=${REGISTRY_USER}
     ENV REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
-
     ENV COSIGN_EXPERIMENTAL=1
     COPY +build-cosign/cosign /usr/local/bin/
-
     RUN echo $REGISTRY_PASSWORD | docker login -u $REGISTRY_USER --password-stdin $REGISTRY
-
     DO +SAVE_IMAGE --VERSION=$VERSION
 
 docker-all-platforms:
@@ -222,7 +190,6 @@ provider-package-pull:
     ARG TARGETARCH
     FROM ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}-${TARGETARCH}
     SAVE IMAGE --push ${IMAGE_REPOSITORY}/provider-kubeadm:${VERSION}
-
 
 cosign-all-platforms:
      BUILD --platform=linux/amd64 +cosign
