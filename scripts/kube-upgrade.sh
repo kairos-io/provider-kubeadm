@@ -35,6 +35,7 @@ fi
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
 PREFLIGHT_SKIP_AFTER=${PREFLIGHT_SKIP_AFTER:-5}
+PREFLIGHT_IGNORE_ERRORS=${PREFLIGHT_IGNORE_ERRORS:-CreateJob}
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
@@ -185,9 +186,11 @@ run_upgrade() {
                 # the upgrade that would restore scheduling is itself the thing
                 # blocked, so the check has to be abandoned or the loop never ends.
                 # --skip-phases is 1.32+, --ignore-preflight-errors works on all.
+                # Named checks only: etcd health, port conflicts, swap and
+                # ControlPlaneNodesReady must still be able to fail the upgrade.
                 if [ "$apply_failures" -ge "$PREFLIGHT_SKIP_AFTER" ]; then
-                  echo "upgrade apply failed $apply_failures times, ignoring preflight errors"
-                  upgrade_command="$upgrade_command --ignore-preflight-errors=all"
+                  echo "upgrade apply failed $apply_failures times, ignoring preflight errors: $PREFLIGHT_IGNORE_ERRORS"
+                  upgrade_command="$upgrade_command --ignore-preflight-errors=$PREFLIGHT_IGNORE_ERRORS"
                 fi
             fi
         fi
