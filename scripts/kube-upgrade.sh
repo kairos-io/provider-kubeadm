@@ -34,6 +34,9 @@ fi
 
 CURRENT_NODE_NAME=$(cat /etc/hostname)
 
+PREFLIGHT_SKIP_AFTER=${PREFLIGHT_SKIP_AFTER:-5}
+PREFLIGHT_IGNORE_ERRORS=${PREFLIGHT_IGNORE_ERRORS:-CreateJob}
+
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
 get_current_upgrading_node_name() {
@@ -141,6 +144,7 @@ run_upgrade() {
     fi
 
     # Upgrade loop, runs until both stored and current is same
+    apply_failures=0
     until [ "$current_version" = "$old_version" ]
     do
         # worker node will always run 'upgrade node'
@@ -178,6 +182,16 @@ run_upgrade() {
                   up=("kubeadm upgrade apply -y ${current_version}")
                   upgrade_command="${up[*]}"
                 fi
+                # Preflight runs a health-check Job. When no pod can be scheduled,
+                # the upgrade that would restore scheduling is itself the thing
+                # blocked, so the check has to be abandoned or the loop never ends.
+                # --skip-phases is 1.32+, --ignore-preflight-errors works on all.
+                # Named checks only: etcd health, port conflicts, swap and
+                # ControlPlaneNodesReady must still be able to fail the upgrade.
+                if [ "$apply_failures" -ge "$PREFLIGHT_SKIP_AFTER" ]; then
+                  echo "upgrade apply failed $apply_failures times, ignoring preflight errors: $PREFLIGHT_IGNORE_ERRORS"
+                  upgrade_command="$upgrade_command --ignore-preflight-errors=$PREFLIGHT_IGNORE_ERRORS"
+                fi
             fi
         fi
         echo "upgrading node from $old_version to $current_version using command: $upgrade_command"
@@ -189,10 +203,12 @@ run_upgrade() {
             old_version=$current_version
 
             delete_lock_config_map
+            apply_failures=0
             echo "upgrade success"
         else
             echo "upgrade failed"
             if echo "$upgrade_command" | grep -q "apply"; then
+              apply_failures=$((apply_failures + 1))
               echo "reverting kubeadm config"
               revert_kubeadm_config
             fi
