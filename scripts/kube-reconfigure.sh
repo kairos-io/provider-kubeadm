@@ -10,6 +10,12 @@ info() {
     echo "[INFO] " "$@"
 }
 
+get_etcd_data_dir() {
+  if [[ -f /etc/kubernetes/manifests/etcd.yaml ]]; then
+    grep -- '--data-dir=' /etc/kubernetes/manifests/etcd.yaml | sed 's/.*--data-dir=\([^ "]*\).*/\1/' | head -1
+  fi
+}
+
 node_role=$1
 certs_sans_revision=$2
 kubelet_envs=$3
@@ -134,6 +140,26 @@ update_file_permissions() {
   if [ -f /etc/kubernetes/proxy.conf ]; then
     chown root:root /etc/kubernetes/proxy.conf
     chmod 600 /etc/kubernetes/proxy.conf
+  fi
+
+  # CNTR-K8-003120 - etcd must be owned by etcd
+  # Create etcd user/group if they don't exist
+  if ! getent group etcd &>/dev/null; then
+    groupadd --system etcd
+    info "Created etcd group"
+  fi
+  if ! id "etcd" &>/dev/null; then
+    useradd --system --gid etcd --no-create-home --shell /sbin/nologin etcd
+    info "Created etcd user"
+  fi
+
+  # CNTR-K8-003260 - etcd data directory permissions
+  ETCD_DATA_DIR=$(get_etcd_data_dir)
+  if [[ -n "$ETCD_DATA_DIR" && -d "$ETCD_DATA_DIR" ]]; then
+    chown -R etcd:etcd "$ETCD_DATA_DIR"
+    chmod 700 "$ETCD_DATA_DIR"
+    find "$ETCD_DATA_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
+    info "Set etcd data directory ($ETCD_DATA_DIR) ownership to etcd:etcd"
   fi
 }
 
