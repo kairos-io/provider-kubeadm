@@ -1,6 +1,11 @@
 # Kairos Kubeadm Cluster Plugin
 Kairos provider for Kubeadm
 
+> [!WARNING]
+> **Community supported.** Support here is done by the community that manages
+> this repository, not by the Kairos team. Open issues here, on this
+> repository.
+
 ## Overview
 
 The provider-kubeadm enables Kairos to bootstrap Kubernetes clusters using kubeadm instead of the default k3s/k0s providers. This gives you a standard upstream Kubernetes cluster with full control over the configuration.
