@@ -15,7 +15,7 @@ ARG VERSION=latest
 FROM quay.io/kairos/kairos-init:${KAIROS_INIT_VERSION} AS kairos-init
 
 # Stage 2: Build the provider binary
-FROM golang:1.26.6-alpine AS builder
+FROM golang:1.27.1-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
