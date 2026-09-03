@@ -8,7 +8,7 @@ require (
 	github.com/mudler/yip v1.16.3
 	github.com/onsi/gomega v1.38.2
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
-	github.com/twpayne/go-vfs/v5 v5.0.1
+	github.com/twpayne/go-vfs/v5 v5.0.5
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.31.2
